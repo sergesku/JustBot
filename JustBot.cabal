@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 11b51fabc6c35ff5cc0463ec4e9c6814325cadd8b64ab719a79dad158b30c977
+-- hash: a5acf657007a95824cfe87edc11ec94837212a5c0363fb90b8cb052ff1555b6a
 
 name:           JustBot
 version:        0.1.0.0
@@ -32,6 +32,7 @@ library
       Database.FileDB
       Database.Internal
       Database.IORefDB
+      Logger
       Logger.ConsoleLog
       Logger.FileLog
       Logger.Internal
