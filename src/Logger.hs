@@ -13,6 +13,7 @@ module Logger
   , getConfig
   ) where
 
+import           Data.Ini.Config
 import           Logger.Internal
 import qualified Logger.FileLog                as FileLog
 import qualified Logger.ConsoleLog             as ConsoleLog
@@ -33,5 +34,5 @@ new SFileLog    = FileLog.new
 new SConsoleLog = ConsoleLog.new
 
 getConfig :: Singl l -> Text -> Either String (Config' l)
-getConfig SFileLog    = FileLog.getConfig
-getConfig SConsoleLog = ConsoleLog.getConfig
+getConfig SFileLog = (`parseIniFile` FileLog.parseConfig)
+getConfig SConsoleLog = (`parseIniFile` ConsoleLog.parseConfig)

@@ -17,9 +17,6 @@ data Config = Config
   , logFile     :: FilePath
   } deriving (Show)
 
-getConfig :: Text -> Either String Config
-getConfig = (`parseIniFile` parseConfig)
-
 parseConfig :: IniParser Config
 parseConfig = section "Logging" $ Config
   <$> fieldDefOf "priority" (readEither . T.unpack) Debug
