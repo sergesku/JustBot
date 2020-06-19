@@ -13,5 +13,5 @@ data Config = Config
 new :: Config -> Handle
 new Config {..} = Handle{..} where
   log priority str
-    | priority >= logPriority = appendFile logFile $ unwords [show priority, ":", str]
+    | priority >= logPriority = appendFile logFile $ mkLogMessage priority str
     | otherwise = return ()

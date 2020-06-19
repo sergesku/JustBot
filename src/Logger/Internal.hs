@@ -21,3 +21,6 @@ logWarning = (`log` Warning)
 
 logError :: Handle -> String -> IO ()
 logError = (`log` Error)
+
+mkLogMessage :: Priority -> String -> String
+mkLogMessage  p str = unwords [show p, ":", str]
