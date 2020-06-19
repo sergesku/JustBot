@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ce62e45ab33aee4d7bee8214ab5d68861cccfde10b26cdb1d1e219d1476b2f9f
+-- hash: ad1589bac3cdf9a40bfdf29bef7fc7768024c83f9ac3d23a503deb930a5dcd79
 
 name:           JustBot
 version:        0.1.0.0
@@ -32,6 +32,7 @@ library
       Database.FileDB
       Database.Internal
       Database.IORefDB
+      Logger
       Messenger
       Messenger.Internal
       Messenger.Proxy
@@ -65,6 +66,7 @@ executable JustBot-exe
       JustBot
     , base >=4.7 && <5
     , mtl
+    , text
   default-language: Haskell2010
 
 test-suite JustBot-test
@@ -79,4 +81,5 @@ test-suite JustBot-test
       JustBot
     , base >=4.7 && <5
     , mtl
+    , text
   default-language: Haskell2010
