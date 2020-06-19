@@ -5,3 +5,17 @@ data Priority = Debug     -- ^ Debug info
               | Warning   -- ^ Something is probably wrong and we should investigate
               | Error     -- ^ Something is wrong and immediate action is required
               deriving (Eq, Ord, Show)
+
+newtype Handle = Handle { log :: Priority -> String -> IO () }
+
+logDebug :: Handle -> String -> IO ()
+logDebug = (`log` Debug)
+
+logInfo :: Handle -> String -> IO ()
+logInfo = (`log` Info)
+
+logWarning :: Handle -> String -> IO ()
+logWarning = (`log` Warning)
+
+logError :: Handle -> String -> IO ()
+logError = (`log` Error) 
