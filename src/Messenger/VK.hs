@@ -20,7 +20,7 @@ import           Data.Text                   (Text)
 import           Data.List                   (intersperse)
 import qualified Data.Text             as T
 import qualified Data.Vector           as V
-import qualified Data.ByteString.Char8 as S8
+import qualified Data.ByteString.Char8.Extended as S8
 import qualified Data.ByteString.Lazy.Char8 as L8
 
 data LongPollConfig = LongPollConfig
@@ -62,7 +62,7 @@ new cfg@Config{..} = Handle{..} where
         offset = max (lastN 20) n
         query  = [ ("act", Just "a_check")
                  , ("key", Just lpKey)
-                 , ("ts", Just $ toBS offset)
+                 , ("ts", Just $ S8.show offset)
                  , ("wait", Just "25")
                  ]
     req <- setRequestQueryString query
@@ -86,7 +86,7 @@ withHandle cfg f = f $ new cfg
 
 sendMessageWith :: Config -> (Request -> Request) -> UserId -> Content -> IO ()
 sendMessageWith Config{..} f userId msg = do
-  let baseQuery = [ ("peer_id", Just $ toBS userId)
+  let baseQuery = [ ("peer_id", Just $ S8.show userId)
                   , ("v", Just "5.89")
                   , ("access_token", Just token)
                   ]      
@@ -170,7 +170,7 @@ stickerPars :: Pars Content
 stickerPars = withObject "sticker" $ \ o -> do
     (x:_)      <- V.toList <$> (o .: "attachments")
     sticker_id <- (x .: "sticker") >>= ( .: "id") :: Parser Int
-    return . StickerMsg . toBS $ sticker_id
+    return . StickerMsg . S8.show $ sticker_id
     
 attachmentPars :: Pars Content
 attachmentPars = withObject "attachment" $ \o -> photoPars (Object o)

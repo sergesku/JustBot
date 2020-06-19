@@ -37,9 +37,3 @@ data Command = Command'Help
              | Command'Repeat
              | Command'SetRepeat Int
              deriving (Eq, Show)
-
-toBS :: (Show a) => a -> ByteString
-toBS = pack . show
-
-fromBS :: (Read a) => ByteString -> a
-fromBS = read . unpack

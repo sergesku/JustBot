@@ -19,7 +19,7 @@ import           Data.Text.Encoding          (encodeUtf8)
 import           Data.Text                   (Text)
 import qualified Data.Vector           as V
 import qualified Data.Text             as T
-import qualified Data.ByteString.Char8 as S8
+import qualified Data.ByteString.Char8.Extended as S8
 import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.Ini.Config
 import           Network.HTTP.Simple         (Proxy(..))
@@ -47,7 +47,7 @@ new cfg@Config{..} = Handle{..} where
   getUpdate :: Int -> IO [Update]
   getUpdate offset = do
     let req    = baseReqWith cfg "GET" "/getUpdates" query
-        query  = [("offset", Just $ toBS offset), ("timeout", Just "25")]
+        query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
@@ -61,7 +61,7 @@ withHandle cfg@Config{..} f = f Handle{..} where
   sendKeyMessage  = sendMessageWith cfg . addToRequestQueryString . keyboardQuery
   getUpdate offset = do
     let req    = baseReqWith cfg "GET" "/getUpdates" query
-        query  = [("offset", Just $ toBS offset), ("timeout", Just "25")]
+        query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
@@ -78,7 +78,7 @@ baseReqWith Config{..} method path query = setRequestMethod method
                     
 sendMessageWith :: Config -> (Request -> Request) -> UserId -> Content -> IO ()
 sendMessageWith cfg f userId cont = (httpLBS $ f req) >> return ()
-  where postReqWith path (flag,txt) = baseReqWith cfg "POST" path [("chat_id", Just $ toBS userId), (flag, Just txt)]
+  where postReqWith path (flag,txt) = baseReqWith cfg "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
         req = case cont of
                 (TextMsg t)      -> postReqWith "/sendMessage"   ("text", t)
                 (FileMsg t)      -> postReqWith "/sendDocument"  ("document", t)
