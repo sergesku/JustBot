@@ -4,6 +4,7 @@
 
 module Logger.FileLog where
 
+import           Control.Monad
 import           Text.Read                      (readEither)
 import qualified Data.Text               as T
 import           Data.Text                      (Text)
@@ -25,7 +26,6 @@ parseConfig = section "Logging" $ Config
   <*> fieldDefOf "logFile" string "./log.log"
 
 new :: Config -> Handle
-new Config {..} = Handle{..} where
-  log priority str
-    | priority >= logPriority = appendFile logFile $ mkLogMessage priority str
-    | otherwise = return ()
+new Config {..} = Handle $ \ pri str -> do
+  let io = appendFile logFile $ mkLogMessage pri str
+  when (pri >= logPriority) io
