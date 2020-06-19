@@ -4,13 +4,13 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0cf0811f2820baba304e128c5b940b9f6e3362a67a09e17852392c35e0086280
+-- hash: 11b51fabc6c35ff5cc0463ec4e9c6814325cadd8b64ab719a79dad158b30c977
 
 name:           JustBot
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/sergey-ku/JustBot#readme>
-homepage:       https://github.com/sergey-ku/JustBot#readme
-bug-reports:    https://github.com/sergey-ku/JustBot/issues
+homepage:       https://github.com/sergey2nd/JustBot#readme
+bug-reports:    https://github.com/sergey2nd/JustBot/issues
 author:         Sergey Kurgak
 maintainer:     kurgak.ss@gmail.com
 copyright:      2020 Sergey Kurgak
@@ -23,7 +23,7 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/sergey-ku/JustBot
+  location: https://github.com/sergey2nd/JustBot
 
 library
   exposed-modules:
