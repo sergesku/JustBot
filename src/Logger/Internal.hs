@@ -1,4 +1,4 @@
-module Logger where
+module Logger.Internal where
 
 data Priority = Debug     -- ^ Debug info
               | Info      -- ^ Nottable information that requires no immediate action
