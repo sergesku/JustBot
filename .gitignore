@@ -1,0 +1,8 @@
+.vscode
+.history
+.stack-work/
+workTask.txt
+*.ini
+*.db
+.ghcid
+*~
