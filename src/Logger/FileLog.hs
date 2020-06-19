@@ -1,8 +1,17 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Logger.FileLog where
 
-import Logger.Internal
+import           Prelude                 hiding ( log )
+import           Logger.Internal
 
-data  Config = Config
+data Config = Config
   { logPriority :: Priority
   , logFile     :: FilePath
   } deriving (Show)
+
+new :: Config -> Handle
+new Config {..} = Handle{..} where
+  log priority str
+    | priority >= logPriority = appendFile logFile $ unwords [show priority, ":", str]
+    | otherwise = return ()

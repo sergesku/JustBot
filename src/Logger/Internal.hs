@@ -1,5 +1,7 @@
 module Logger.Internal where
 
+import Prelude hiding (log)
+
 data Priority = Debug     -- ^ Debug info
               | Info      -- ^ Nottable information that requires no immediate action
               | Warning   -- ^ Something is probably wrong and we should investigate
@@ -18,4 +20,4 @@ logWarning :: Handle -> String -> IO ()
 logWarning = (`log` Warning)
 
 logError :: Handle -> String -> IO ()
-logError = (`log` Error) 
+logError = (`log` Error)
