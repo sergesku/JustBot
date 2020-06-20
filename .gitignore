@@ -5,4 +5,5 @@ workTask.txt
 *.ini
 *.db
 .ghcid
+*.log
 *~
