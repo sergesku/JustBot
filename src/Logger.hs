@@ -11,8 +11,9 @@ module Logger
   , logWarning
   , new
   , getConfig
-  ) where
+  ) where 
 
+import           Data.Singl
 import           Data.Ini.Config
 import           Logger.Internal
 import qualified Logger.FileLog                as FileLog
@@ -23,16 +24,10 @@ type family Config' (l :: Log) :: *
 type instance Config' FileLog = FileLog.Config
 type instance Config' ConsoleLog = ConsoleLog.Config
 
-data Singl (l :: Log) where
-  SFileLog ::Singl 'FileLog
-  SConsoleLog ::Singl 'ConsoleLog
+new :: SinglLog l -> Config' l -> Handle
+new SFile    = FileLog.new
+new SConsole = ConsoleLog.new
 
-data Log = FileLog | ConsoleLog deriving (Eq, Show)
-
-new :: Singl l -> Config' l -> Handle
-new SFileLog    = FileLog.new
-new SConsoleLog = ConsoleLog.new
-
-getConfig :: Singl l -> Text -> Either String (Config' l)
-getConfig SFileLog = (`parseIniFile` FileLog.parseConfig)
-getConfig SConsoleLog = (`parseIniFile` ConsoleLog.parseConfig)
+getConfig :: SinglLog l -> Text -> Either String (Config' l)
+getConfig SFile = (`parseIniFile` FileLog.parseConfig)
+getConfig SConsole = (`parseIniFile` ConsoleLog.parseConfig)
