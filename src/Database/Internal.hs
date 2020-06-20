@@ -8,8 +8,9 @@ import Data.Singl
 import Data.Ini.Config
 import Types
 import Data.Aeson
-import Data.IntMap.Strict (IntMap, empty)
-import Data.Text                  (Text)
+import Data.Maybe         ( fromMaybe )
+import Data.IntMap.Strict ( IntMap, empty )
+import Data.Text                  ( Text )
 
 data Handle = Handle
   { getOffset      :: IO Int
@@ -48,7 +49,7 @@ dbFileParser m = case m of
   where parser sName def = section sName $ fieldDefOf "database" string def
 
 getDatabase :: FilePath -> IO Database
-getDatabase file = maybe emptyDB id <$> decodeFileStrict file
+getDatabase file = fromMaybe emptyDB <$> decodeFileStrict file
 
 emptyDB :: Database
 emptyDB = Database 0 empty
