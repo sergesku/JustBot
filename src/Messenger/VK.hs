@@ -94,7 +94,7 @@ sendMessageWith Config{..} f userId msg = do
               (TextMsg bs)        -> [("message", Just bs)]
               (StickerMsg bs)     -> [("sticker_id", Just bs)]
               (ComplexMsg bs lst) -> collectQuery bs lst
-              m                   -> error $ "Unsupported content type!" <> (show m)
+              m                   -> error $ "Unsupported content type!" <> show m
       req = setRequestMethod "POST"
           $ setRequestProxy proxy
           $ addToRequestQueryString (baseQuery <> query)
@@ -147,11 +147,11 @@ updatePars updateId = withObject "update" $ \o -> do
     return $ Update{..}
     
 textPars :: Pars Content
-textPars = withObject "text" $ \ o -> (TextMsg . encodeUtf8) <$> (o .: "body")
+textPars = withObject "text" $ \ o -> TextMsg . encodeUtf8 <$> (o .: "body")
  
 mediaPars :: (ByteString -> Content) -> String -> Pars Content
 mediaPars constructor str = withObject str $ \ o -> do
-    obj     <- o .: (T.pack str)
+    obj     <- o .: T.pack str
     ownerId <- (obj .: "owner_id") :: Parser Integer
     mediaId <- (obj .: "id") :: Parser Integer
     key     <- ('_':) <$> (obj .:? "access_key" .!= "")
@@ -190,10 +190,10 @@ commandPars = withObject "command" $ \ o -> do
     case words txt of
       ("/help":_)         -> return $ CommandMsg Command'Help
       ("/repeat":_)       -> return $ CommandMsg Command'Repeat
-      ("Change":"to":n:_) -> do let x = (read n) :: Int
-                                guard (and [x > 0, x <= 5])
+      ("Change":"to":n:_) -> do let x = read n :: Int
+                                guard (x > 0 && x <= 5)
                                 return $ CommandMsg $ Command'SetRepeat x 
-      _                   -> fail $ "Unsupported command"
+      _                   -> fail "Unsupported command"
 
 
 keyboardQuery :: Keyboard -> Query
