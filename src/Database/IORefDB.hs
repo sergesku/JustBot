@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Database.IORefDB where
@@ -29,7 +28,7 @@ new Config{..} = return $ Handle{..} where
   getOffset = readIORef offsetRef
 
   setOffset :: Int -> IO ()
-  setOffset n = writeIORef offsetRef n
+  setOffset = writeIORef offsetRef
   
   getUserRepeatN :: UserId -> IO (Maybe Int)
   getUserRepeatN userId = M.lookup userId <$> readIORef userRef
