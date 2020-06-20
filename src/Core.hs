@@ -16,6 +16,7 @@ import qualified Database                   as DB
 import qualified Messenger                  as MSG 
 import qualified Data.Text.Encoding         as T   (encodeUtf8)
 import qualified Data.ByteString.Char8.Extended as S8  (split, intercalate, show)
+import           Data.Maybe                       (fromMaybe)
 
 data Config = Config
   { helpMessage   :: ByteString
@@ -54,7 +55,7 @@ processHelp msgH userId = asks helpMessage >>= liftIO . MSG.sendMessage msgH use
 processRepeat :: MSG.Handle -> DB.Handle -> UserId -> ReaderT Config IO ()
 processRepeat msgH dbH userId = do
     Config{..} <- ask
-    n <- liftIO $ maybe defRepeatN id <$> DB.getUserRepeatN dbH userId 
+    n <- liftIO $ fromMaybe defRepeatN <$> DB.getUserRepeatN dbH userId 
     let chunks = S8.split '@' repeatMessage
         msg = TextMsg $ S8.intercalate (S8.show n) chunks
         kb  = [ [("Change to 1", "1"), ("Change to 2", "2")]
@@ -67,15 +68,15 @@ processSetRepeat :: MSG.Handle -> DB.Handle -> UserId -> Int -> ReaderT Config I
 processSetRepeat msgH dbH userId newN = do
     defN <- asks defRepeatN
     liftIO $ do
-             let newNmessage = TextMsg $ "Ok, I fix it. It will be " <> (S8.show newN)
+             let newNmessage = TextMsg $ "Ok, I fix it. It will be " <> S8.show newN
                  oldNmessage = TextMsg $ "Already " <> S8.show newN <> ". There is nothing to change."
              mbUserN <- DB.getUserRepeatN dbH userId
              case mbUserN of
                Nothing -> do DB.setUserRepeatN dbH userId newN
-                             if (newN == defN)
+                             if newN == defN
                                then MSG.sendMessage msgH userId oldNmessage
                                else MSG.sendMessage msgH userId newNmessage
-               Just n  -> if (newN == n)
+               Just n  -> if newN == n
                            then MSG.sendMessage msgH userId oldNmessage
                            else do DB.setUserRepeatN dbH userId newN
                                    MSG.sendMessage msgH userId newNmessage
@@ -83,5 +84,5 @@ processSetRepeat msgH dbH userId newN = do
 processSendAnswer :: MSG.Handle -> DB.Handle -> Update -> ReaderT Config IO ()
 processSendAnswer msgH dbH u@Update{..} = do
     defN <- asks defRepeatN
-    liftIO $ do n <- maybe defN id <$> DB.getUserRepeatN dbH userId
+    liftIO $ do n <- fromMaybe defN <$> DB.getUserRepeatN dbH userId
                 replicateM_ n $ MSG.sendMessage msgH userId content
