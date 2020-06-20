@@ -22,7 +22,6 @@ import qualified Data.Text             as T
 import qualified Data.ByteString.Char8.Extended as S8
 import qualified Data.ByteString.Lazy.Char8 as L8
 import           Data.Ini.Config
-import           Network.HTTP.Simple         (Proxy(..))
 
 data Config = Config
   { token :: ByteString
@@ -74,10 +73,10 @@ baseReqWith Config{..} method path query = setRequestMethod method
                                          $ setRequestPath ("bot" <> token <> path)
                                          $ addToRequestQueryString query
                                          $ setRequestProxy proxy
-                                         $ "https://api.telegram.org"
+                                         "https://api.telegram.org"
                     
 sendMessageWith :: Config -> (Request -> Request) -> UserId -> Content -> IO ()
-sendMessageWith cfg f userId cont = (httpLBS $ f req) >> return ()
+sendMessageWith cfg f userId cont = void $ httpLBS $ f req
   where postReqWith path (flag,txt) = baseReqWith cfg "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
         req = case cont of
                 (TextMsg t)      -> postReqWith "/sendMessage"   ("text", t)
@@ -112,11 +111,11 @@ updatePars = withObject "Update with Bot.Impl.TG.updatePars" $ \o -> do
     userId   <- (message .: "from") >>= ( .: "id")
     content  <- asum [ commandPars (Object message)
                      , callbackPars (Object message)
-                     , (TextMsg . encodeUtf8) <$> (message .: "text")
-                     , (AudioMsg . encodeUtf8) <$> ((message .: "voice") >>= ( .: "file_id"))
-                     , (AnimationMsg . encodeUtf8) <$> ((message .: "animation") >>= ( .: "file_id"))
-                     , (FileMsg . encodeUtf8) <$> ((message .: "document") >>= ( .: "file_id"))
-                     , (StickerMsg . encodeUtf8) <$> ((message .: "sticker") >>= ( .: "file_id"))
+                     , TextMsg . encodeUtf8 <$> (message .: "text")
+                     , AudioMsg . encodeUtf8 <$> ((message .: "voice") >>= ( .: "file_id"))
+                     , AnimationMsg . encodeUtf8 <$> ((message .: "animation") >>= ( .: "file_id"))
+                     , FileMsg . encodeUtf8 <$> ((message .: "document") >>= ( .: "file_id"))
+                     , StickerMsg . encodeUtf8 <$> ((message .: "sticker") >>= ( .: "file_id"))
                      , photoPars (Object message)
                      , return UnsupportedMsg ]   
     return Update{..}
@@ -124,14 +123,14 @@ updatePars = withObject "Update with Bot.Impl.TG.updatePars" $ \o -> do
 photoPars :: Pars Content
 photoPars = withObject "Photo with Bot.Impl.TG.photoPars" $ \o -> do
     (x:_) <- V.toList <$> (o .: "photo")
-    (PhotoMsg . encodeUtf8) <$> (x .: "file_id")
+    PhotoMsg . encodeUtf8 <$> (x .: "file_id")
 
 callbackPars :: Pars Content
 callbackPars = withObject "Command with Bot.Impl.TG.callbackPars" $ \o -> do
     str <- (o .: "data") :: Parser String
     case words str of
       ("/setRepeat":n:_) -> return $ CommandMsg $ Command'SetRepeat (read n)
-      _                  -> fail $ "Wrong Callback"
+      _                  -> fail "Wrong Callback"
 
 commandPars :: Pars Content
 commandPars = withObject "Command with Bot.Impl.TG.commandPars" $ \o -> do
