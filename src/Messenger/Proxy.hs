@@ -12,7 +12,7 @@ module Messenger.Proxy
   ( proxyParser
   ) where
 
-import           Types
+import           Data.Update
 import           Data.Ini.Config
 import           Text.Read                   (readMaybe)
 import           Control.Monad.Except

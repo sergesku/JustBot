@@ -6,7 +6,7 @@ module Messenger.TG where
 
 import           Messenger.Proxy (proxyParser)
 import           Network.HTTP.Simple
-import           Types
+import           Data.Update
 import           Messenger.Internal
 import           Data.Aeson
 import           Data.Aeson.Types

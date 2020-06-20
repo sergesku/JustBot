@@ -5,7 +5,7 @@
 module Database.IORefDB where
 
 import           Data.Singl
-import           Types
+import           Data.Update
 import           Database.Internal
 import           Data.IORef
 import           Data.Text                (Text)

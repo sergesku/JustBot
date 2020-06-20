@@ -6,7 +6,7 @@ module Database.Internal where
 
 import Data.Singl
 import Data.Ini.Config
-import Types
+import Data.Update
 import Data.Aeson
 import Data.Maybe         ( fromMaybe )
 import Data.IntMap.Strict ( IntMap, empty )

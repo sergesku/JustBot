@@ -10,7 +10,7 @@ module Messenger.Internal where
 
 import           Data.Aeson
 import           Data.Aeson.Types
-import           Types
+import           Data.Update
 import           Data.Text                       (Text)
 
 type Button   = (Text, Text)        -- (Button Label, Button Value)

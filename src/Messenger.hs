@@ -11,7 +11,7 @@ module Messenger
 
 import           Data.Singl
 import           Data.Text                (Text)
-import           Types
+import           Data.Update
 import           Messenger.Internal       (Handle(..))
 import qualified Messenger.VK       as VK
 import qualified Messenger.TG       as TG

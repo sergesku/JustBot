@@ -7,7 +7,7 @@ module Main where
 import           Data.Singl
 import qualified Messenger            as MSG   (getConfig, withHandle)
 import qualified Database             as DB    (getConfig, withHandle)
-import           Types               
+import           Data.Update               
 import           Control.Monad       
 import           Core                          (getConfig, interaction)                 
 import           Data.Char                     (toUpper)

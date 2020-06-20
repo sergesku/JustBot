@@ -1,10 +1,6 @@
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE GADTs #-}
+module Data.Update where
 
-module Types where
-
-import Data.ByteString.Char8 (ByteString, pack, unpack)
+import Data.ByteString.Char8 (ByteString)
 
 type UserId = Int
 

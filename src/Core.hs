@@ -6,7 +6,7 @@
 module Core where
 
 import           Data.Ini.Config
-import           Types 
+import           Data.Update 
 import           Data.Text                         (Text)
 import           Control.Monad.IO.Class            (liftIO)
 import           Control.Monad                     (replicateM_)

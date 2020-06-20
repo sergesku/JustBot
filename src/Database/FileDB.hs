@@ -5,7 +5,7 @@
 module Database.FileDB where
 
 import           Data.Singl
-import           Types
+import           Data.Update
 import           Data.Aeson
 import           Data.Text                  (Text)
 import qualified Data.IntMap.Strict   as M  (lookup, insert)

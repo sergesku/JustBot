@@ -6,7 +6,7 @@ module Messenger.VK where
 
 import           Data.Ini.Config
 import           Messenger.Proxy (proxyParser)
-import           Types
+import           Data.Update
 import           Messenger.Internal
 import           Data.Aeson
 import           Data.Aeson.Types
