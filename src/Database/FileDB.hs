@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Database.FileDB where
@@ -17,7 +16,7 @@ data Config = Config
   } deriving Show
 
 getConfig :: SinglMsg m -> Text -> Config
-getConfig singl txt = Config $ either (error) id (getDBFile singl txt)
+getConfig singl txt = Config $ either error id $ getDBFile singl txt
 
 new :: Config -> IO Handle
 new Config{..} = return $ Handle{..} where
@@ -25,7 +24,7 @@ new Config{..} = return $ Handle{..} where
   getOffset = offset <$> getDatabase dbFile
   
   getUserRepeatN :: UserId -> IO (Maybe Int)
-  getUserRepeatN userId = (M.lookup userId . userMap) <$> getDatabase dbFile
+  getUserRepeatN userId = M.lookup userId . userMap <$> getDatabase dbFile
   
   setOffset :: Int -> IO ()
   setOffset n = do
