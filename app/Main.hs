@@ -3,6 +3,7 @@
 
 module Main where
 
+import           Data.Singl
 import qualified Messenger            as MSG   (getConfig, withHandle)
 import qualified Database             as DB    (getConfig, withHandle)
 import           Types               
@@ -28,7 +29,7 @@ main = do
       "VK" -> chatWith SVK
       _    -> error $ unlines ["\nUnknown messenger: " <> ms, optionsStr]
 
-chatWith :: Singl m -> IO ()
+chatWith :: SinglMsg m -> IO ()
 chatWith singl = do
     txt <- T.readFile "config.ini"
     let (Right config) = getConfig txt

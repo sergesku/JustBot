@@ -8,14 +8,6 @@ import Data.ByteString.Char8 (ByteString, pack, unpack)
 
 type UserId = Int
 
-data Messenger = TG
-               | VK
-               deriving (Show)
-
-data Singl (m :: Messenger) where
-  STG :: Singl 'TG
-  SVK :: Singl 'VK
-
 data Update = Update
   { updateId :: Int
   , userId   :: UserId

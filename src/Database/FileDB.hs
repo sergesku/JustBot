@@ -4,6 +4,7 @@
 
 module Database.FileDB where
 
+import           Data.Singl
 import           Types
 import           Data.Aeson
 import           Data.Text                  (Text)
@@ -15,7 +16,7 @@ data Config = Config
   { dbFile :: FilePath
   } deriving Show
 
-getConfig :: Singl m -> Text -> Config
+getConfig :: SinglMsg m -> Text -> Config
 getConfig singl txt = Config $ either (error) id (getDBFile singl txt)
 
 new :: Config -> IO Handle

@@ -4,6 +4,7 @@
 
 module Database.IORefDB where
 
+import           Data.Singl
 import           Types
 import           Database.Internal
 import           Data.IORef
@@ -16,7 +17,7 @@ data Config = Config
   , userRef   :: IORef (IntMap Int)
   }
 
-getConfig :: Singl m -> Text -> IO Config
+getConfig :: SinglMsg m -> Text -> IO Config
 getConfig singl txt = do
   let eFile = getDBFile singl txt
   Database{..} <- either (return . const emptyDB) getDatabase eFile

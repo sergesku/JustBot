@@ -4,6 +4,7 @@
 
 module Database.Internal where
 
+import Data.Singl
 import Data.Ini.Config
 import Types
 import Data.Aeson
@@ -37,10 +38,10 @@ instance ToJSON Database where
     , "userMap" .= userMap
     ]
 
-getDBFile :: Singl m -> Text -> Either String FilePath
+getDBFile :: SinglMsg m -> Text -> Either String FilePath
 getDBFile singl txt = parseIniFile txt (dbFileParser singl)
                      
-dbFileParser :: Singl m -> IniParser FilePath
+dbFileParser :: SinglMsg m -> IniParser FilePath
 dbFileParser m = case m of
                   STG -> parser "TG" "tg.db"
                   SVK -> parser "VK" "vk.db"
