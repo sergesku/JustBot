@@ -10,6 +10,7 @@ module Logger
   , logError
   , logWarning
   , new
+  , withHandle
   , getConfig
   ) where 
 
@@ -27,6 +28,10 @@ type instance Config' ConsoleLog = ConsoleLog.Config
 new :: SinglLog l -> Config' l -> Handle
 new SFile    = FileLog.new
 new SConsole = ConsoleLog.new
+
+withHandle :: SinglLog l -> Config' l -> (Handle -> IO ()) -> IO ()
+withHandle SFile    = FileLog.withHandle
+withHandle SConsole = ConsoleLog.withHandle
 
 getConfig :: SinglLog l -> Text -> Either String (Config' l)
 getConfig SFile = (`parseIniFile` FileLog.parseConfig)

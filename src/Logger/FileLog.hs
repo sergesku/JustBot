@@ -25,3 +25,6 @@ parseConfig = section "Logging" $ Config
 new :: Config -> Handle
 new Config {..} = Handle $ \ pri str ->
   when (pri >= logPriority) $ appendFile logFile str
+
+withHandle :: Config -> (Handle -> IO ()) -> IO ()
+withHandle cfg f = f $ new cfg
