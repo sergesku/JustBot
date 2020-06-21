@@ -4,6 +4,7 @@
 
 module Database.Internal where
 
+import qualified Logger
 import Data.Singl
 import Data.Ini.Config
 import Data.Update
@@ -41,15 +42,20 @@ instance ToJSON Database where
 
 getDBFile :: SinglMsg m -> Text -> Either String FilePath
 getDBFile singl txt = parseIniFile txt (dbFileParser singl)
-                     
+
 dbFileParser :: SinglMsg m -> IniParser FilePath
 dbFileParser m = case m of
                   STG -> parser "TG" "tg.db"
                   SVK -> parser "VK" "vk.db"
   where parser sName def = section sName $ fieldDefOf "database" string def
 
-getDatabase :: FilePath -> IO Database
-getDatabase file = fromMaybe emptyDB <$> decodeFileStrict file
+getDatabase :: FilePath -> Logger.Handle -> IO Database
+getDatabase file logH = do
+  mbDB <- decodeFileStrict file
+  case mbDB of
+    Just _  -> Logger.logDebug logH $ "Database | Read database from file " <> file
+    Nothing -> Logger.logInfo logH $ "Database | Couldn`t read database from file " <> file <> ". Initializing empty database"
+  return $ fromMaybe emptyDB mbDB
 
 emptyDB :: Database
 emptyDB = Database 0 empty

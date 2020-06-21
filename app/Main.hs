@@ -45,13 +45,14 @@ main = do
 chatWith :: SinglMsg m -> SinglLog l -> IO ()
 chatWith msg logger = do
     txt <- T.readFile "config.ini"
-    let Right config = getConfig txt
-        Right logConfig = Log.getConfig logger txt
-        emsgConfig = MSG.getConfig msg txt
-        dbConfig = DB.getConfig msg txt
-    case emsgConfig of
-      Left e -> fail e
-      Right msgConfig -> Log.withHandle logger logConfig $ \logH ->
-                           MSG.withHandle msg msgConfig $ \msgH ->
-                             DB.withHandle dbConfig logH $ \dbH -> 
-                               (`runReaderT` config) (forever $ interaction msgH dbH)
+    let Right logConfig = Log.getConfig logger txt
+    Log.withHandle logger logConfig $ \logH -> do
+      let Right config = getConfig txt
+          emsgConfig = MSG.getConfig msg txt
+      dbConfig <- DB.getConfig msg logH txt
+      case emsgConfig of
+        Left e -> fail e
+        Right msgConfig -> Log.withHandle logger logConfig $ \logH ->
+                             MSG.withHandle msg msgConfig $ \msgH ->
+                               DB.withHandle dbConfig logH $ \dbH -> 
+                                 (`runReaderT` config) (forever $ interaction msgH dbH)
