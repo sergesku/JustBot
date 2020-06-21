@@ -23,6 +23,5 @@ parseConfig = section "Logging" $ Config
   <*> fieldDefOf "logFile" string "./log.log"
 
 new :: Config -> Handle
-new Config {..} = Handle $ \ pri str -> do
-  let io = appendFile logFile $ mkLogMessage pri str
-  when (pri >= logPriority) io
+new Config {..} = Handle $ \ pri str ->
+  when (pri >= logPriority) $ appendFile logFile str

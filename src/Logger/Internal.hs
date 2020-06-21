@@ -11,16 +11,19 @@ data Priority = Debug     -- ^ Debug info
 newtype Handle = Handle { log :: Priority -> String -> IO () }
 
 logDebug :: Handle -> String -> IO ()
-logDebug = (`log` Debug)
+logDebug = (`logPriority` Debug)
 
 logInfo :: Handle -> String -> IO ()
-logInfo = (`log` Info)
+logInfo = (`logPriority` Info)
 
 logWarning :: Handle -> String -> IO ()
-logWarning = (`log` Warning)
+logWarning = (`logPriority` Warning)
 
 logError :: Handle -> String -> IO ()
-logError = (`log` Error)
+logError = (`logPriority` Error)
+
+logPriority :: Handle -> Priority -> String -> IO ()
+logPriority h pri = log h pri . mkLogMessage pri
 
 mkLogMessage :: Priority -> String -> String
 mkLogMessage  p str = unwords [show p, ":", str]

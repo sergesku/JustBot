@@ -19,6 +19,5 @@ parseConfig = section "Logging" $ Config
   <$> fieldDefOf "logPriority" (readEither . T.unpack) Debug
 
 new :: Config -> Handle
-new Config {..} = Handle $ \ pri str -> do
-  let io = putStrLn $ mkLogMessage pri str
-  when (pri >= logPriority) io
+new Config {..} = Handle $ \ pri str ->
+  when (pri >= logPriority) $ putStrLn str
