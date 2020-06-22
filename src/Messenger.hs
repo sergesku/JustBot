@@ -8,6 +8,7 @@ module Messenger
   )
   where
 
+import qualified Logger
 import           Data.Singl
 import           Data.Text                (Text)
 import           Data.Update
@@ -19,14 +20,14 @@ type family Config' (m :: Msg) :: *
 type instance Config' 'TG = TG.Config
 type instance Config' 'VK = VK.Config
 
-getConfig :: SinglMsg m -> Text -> Either String (Config' m)
+getConfig :: SinglMsg m -> Logger.Handle -> Text -> IO (Config' m)
 getConfig STG = TG.getConfig
 getConfig SVK = VK.getConfig
 
-withHandle :: SinglMsg m -> Config' m -> (Handle -> IO ()) -> IO ()
+withHandle :: SinglMsg m -> Config' m -> Logger.Handle -> (Handle -> IO ()) -> IO ()
 withHandle STG = TG.withHandle
 withHandle SVK = VK.withHandle
 
-new :: SinglMsg m -> Config' m -> Handle
+new :: SinglMsg m -> Config' m -> Logger.Handle -> IO Handle
 new STG = TG.new
 new SVK = VK.new

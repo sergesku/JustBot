@@ -48,11 +48,8 @@ chatWith msg logger = do
     let Right logConfig = Log.getConfig logger txt
     Log.withHandle logger logConfig $ \logH -> do
       let Right config = getConfig txt
-          emsgConfig = MSG.getConfig msg txt
-      dbConfig <- DB.getConfig msg logH txt
-      case emsgConfig of
-        Left e -> fail e
-        Right msgConfig -> Log.withHandle logger logConfig $ \logH ->
-                             MSG.withHandle msg msgConfig $ \msgH ->
-                               DB.withHandle dbConfig logH $ \dbH -> 
-                                 (`runReaderT` config) (forever $ interaction msgH dbH)
+      msgConfig <- MSG.getConfig msg logH txt
+      dbConfig  <- DB.getConfig msg logH txt
+      MSG.withHandle msg msgConfig logH $ \msgH ->
+        DB.withHandle dbConfig logH $ \dbH -> 
+          (`runReaderT` config) (forever $ interaction msgH dbH)

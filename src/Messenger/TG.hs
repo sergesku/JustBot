@@ -4,6 +4,7 @@
 
 module Messenger.TG where
 
+import qualified Logger
 import           Messenger.Proxy (proxyParser)
 import           Network.HTTP.Simple
 import           Data.Update
@@ -34,39 +35,63 @@ configParser = section "TG" $ do
   proxy <- proxyParser
   return $ Config{..}
 
-getConfig :: Text -> Either String Config
-getConfig = (`parseIniFile` configParser)
+getConfig :: Logger.Handle -> Text -> IO Config
+getConfig logH txt = do
+  let eConfig = parseIniFile txt configParser
+  case eConfig of
+    Right cfg -> do Logger.logDebug logH "Messenger | Read TG config from file config.ini"
+                    return cfg
+    Left err  -> do Logger.logError logH $ unwords [ "Messenger | Couldn`t read TG config from file config.ini. Check it:", err]
+                    error ""
 
-new :: Config -> Handle
-new cfg@Config{..} = Handle{..} where
+new :: Config -> Logger.Handle -> IO Handle
+new cfg@Config{..} logH = return $ Handle{..} where
   sendMessage :: UserId -> Content -> IO ()
-  sendMessage     = sendMessageWith cfg id
+  sendMessage  = sendMessageWith cfg logH id
+  
   sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
-  sendKeyMessage  = sendMessageWith cfg . addToRequestQueryString . keyboardQuery
+  sendKeyMessage  = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
+  
   getUpdate :: Int -> IO [Update]
   getUpdate offset = do
     let req    = baseReqWith cfg "GET" "/getUpdates" query
         query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
+    Logger.logDebug logH $ "Messenger | Sending request:" <> show req
     response <- httpLBS req
+    Logger.logDebug logH $ "Messenger | Response received:" <> show response
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
     case update of
-        Left e    -> liftIO $ print e >> return []
-        Right lst -> return lst
+      Left err  -> do Logger.logDebug logH $ "Messenger | There`s no updates"
+                      Logger.logInfo logH $ "Messenger | " <> show err
+                      return []
+      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
+                      return lst
   
-withHandle :: Config -> (Handle -> IO ()) -> IO ()
-withHandle cfg@Config{..} f = f Handle{..} where
-  sendMessage     = sendMessageWith cfg id
-  sendKeyMessage  = sendMessageWith cfg . addToRequestQueryString . keyboardQuery
+withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
+withHandle cfg@Config{..} logH f = f Handle{..} where
+  sendMessage :: UserId -> Content -> IO ()
+  sendMessage = sendMessageWith cfg logH id
+  
+  sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
+  sendKeyMessage  = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
+  
+  getUpdate :: Int -> IO [Update]
   getUpdate offset = do
     let req    = baseReqWith cfg "GET" "/getUpdates" query
         query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
+    Logger.logDebug logH $ "Messenger | Sending request:" <> show req
+    response <- httpLBS req
+    Logger.logDebug logH $ "Messenger | Response received:" <> show response
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
     case update of
-        Left e    -> liftIO $ print e >> return []
-        Right lst -> return lst
+      Left err  -> do Logger.logDebug logH $ "Messenger | There`s no updates"
+                      Logger.logInfo logH $ "Messenger | " <> show err
+                      return []
+      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
+                      return lst
 
 baseReqWith :: Config -> ByteString -> ByteString -> Query -> Request
 baseReqWith Config{..} method path query = setRequestMethod method
@@ -75,8 +100,10 @@ baseReqWith Config{..} method path query = setRequestMethod method
                                          $ setRequestProxy proxy
                                          "https://api.telegram.org"
                     
-sendMessageWith :: Config -> (Request -> Request) -> UserId -> Content -> IO ()
-sendMessageWith cfg f userId cont = void $ httpLBS $ f req
+sendMessageWith :: Config -> Logger.Handle -> (Request -> Request) -> UserId -> Content -> IO ()
+sendMessageWith cfg logH f userId cont = do
+  Logger.logDebug logH $ "Messenger | Sending request:" <> show req
+  void $ httpLBS $ f req
   where postReqWith path (flag,txt) = baseReqWith cfg "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
         req = case cont of
                 (TextMsg t)      -> postReqWith "/sendMessage"   ("text", t)
