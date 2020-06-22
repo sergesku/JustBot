@@ -44,30 +44,6 @@ getConfig logH txt = do
     Left err  -> do Logger.logError logH $ unwords [ "Messenger | Couldn`t read TG config from file config.ini. Check it:", err]
                     error ""
 
-new :: Config -> Logger.Handle -> IO Handle
-new cfg@Config{..} logH = return $ Handle{..} where
-  sendMessage :: UserId -> Content -> IO ()
-  sendMessage  = sendMessageWith cfg logH id
-  
-  sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
-  sendKeyMessage  = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
-  
-  getUpdate :: Int -> IO [Update]
-  getUpdate offset = do
-    let req    = baseReqWith cfg "GET" "/getUpdates" query
-        query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
-    Logger.logDebug logH $ "Messenger | Sending request:" <> show req
-    response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Response received:" <> show response
-    let body   = getResponseBody response
-        update = parseEither updateLstPars =<< eitherDecode body
-    case update of
-      Left err  -> do Logger.logDebug logH $ "Messenger | There`s no updates"
-                      Logger.logInfo logH $ "Messenger | " <> show err
-                      return []
-      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
-                      return lst
-  
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
 withHandle cfg@Config{..} logH f = f Handle{..} where
   sendMessage :: UserId -> Content -> IO ()
@@ -87,7 +63,7 @@ withHandle cfg@Config{..} logH f = f Handle{..} where
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
     case update of
-      Left err  -> do Logger.logDebug logH $ "Messenger | There`s no updates"
+      Left err  -> do Logger.logDebug logH  "Messenger | There`s no updates"
                       Logger.logInfo logH $ "Messenger | " <> show err
                       return []
       Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst

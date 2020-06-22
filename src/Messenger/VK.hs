@@ -60,8 +60,8 @@ getConfig logH txt = do
     Left err  -> do Logger.logError logH $ unwords [ "Messenger | Couldn`t read VK config from file config.ini. Check it:", err]
                     error ""
 
-new :: Config -> Logger.Handle -> IO Handle
-new cfg@Config{..} logH = return $ Handle{..} where
+withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
+withHandle  cfg@Config{..} logH f = f Handle{..} where
   getUpdate :: Int -> IO [Update]
   getUpdate n = do
     LongPollConfig{..} <- getLongPollConfig cfg logH
@@ -92,9 +92,6 @@ new cfg@Config{..} logH = return $ Handle{..} where
   
   sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
   sendKeyMessage = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
-
-withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
-withHandle cfg logH f = new cfg logH >>= f
 
 sendMessageWith :: Config -> Logger.Handle -> (Request -> Request) -> UserId -> Content -> IO ()
 sendMessageWith Config{..} logH f userId msg = do

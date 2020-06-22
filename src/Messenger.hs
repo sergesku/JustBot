@@ -27,7 +27,3 @@ getConfig SVK = VK.getConfig
 withHandle :: SinglMsg m -> Config' m -> Logger.Handle -> (Handle -> IO ()) -> IO ()
 withHandle STG = TG.withHandle
 withHandle SVK = VK.withHandle
-
-new :: SinglMsg m -> Config' m -> Logger.Handle -> IO Handle
-new STG = TG.new
-new SVK = VK.new
