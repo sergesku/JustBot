@@ -3,25 +3,18 @@ module Data.Error where
 import Control.Exception
 import Data.Typeable
 
-data AppError = ErrorDB DatabaseError
-              | ErrorLog LogError
-              | ErrorMsg MessengerError
-              | ErrorCfg ConfigError
-              deriving (Show, Typeable)
+data AppError = NetworkError SomeException
+              | SystemError SomeException
+              | InputArgsError String
+              | ConfigurationError String
+              | ServiceApiError String
+              deriving (Typeable)
 
 instance Exception AppError
 
-data DatabaseError = DatabaseReadError String
-                   | DatabaseWriteError String
-                   deriving Show
-
-data LogError = WriteLogError String
-                deriving Show
-
-data MessengerError = MessengerError deriving Show
-
-data ConfigError = MessengerConfigError String
-                | LoggingConfigError String
-                | DatabaseConfigError String
-                | ApplicationConfigError String
-                deriving Show
+instance Show AppError where
+  show (NetworkError e) = "Network communication error: " <> show e
+  show (SystemError e) = "System error: " <> show e
+  show (InputArgsError t) = "Unsapported args: " <> t
+  show (ConfigurationError t) = "Error parsing configuration file: " <> t
+  show (ServiceApiError t) = "Error while communicating with external services: " <> t
