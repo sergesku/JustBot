@@ -57,7 +57,7 @@ new Config{..} logH = return $ Handle{..} where
     writeDatabase $ db {userMap = newMap}
   
   readDatabase :: IO Database
-  readDatabase = getDatabase dbFile logH
+  readDatabase = initializeDatabase dbFile logH
   
   writeDatabase :: Database -> IO ()
   writeDatabase db = do

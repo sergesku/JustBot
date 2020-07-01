@@ -24,7 +24,7 @@ getConfig singl logH txt = do
     Left err   -> do Logger.logInfo logH "Database | Couldn`t get database file from config.ini. Initializing empty database"
                      return emptyDB
     Right file -> do Logger.logDebug logH $ "Database | Get database file from config.ini: " <> file
-                     getDatabase file logH
+                     initializeDatabase file logH
   offsetRef <- newIORef offset
   Logger.logDebug logH "Database | Initializing offsetRef"
   userRef <- newIORef userMap

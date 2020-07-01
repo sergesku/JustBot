@@ -49,8 +49,8 @@ dbFileParser m = case m of
                   SVK -> parser "VK" "vk.db"
   where parser sName def = section sName $ fieldDefOf "database" string def
 
-getDatabase :: FilePath -> Logger.Handle -> IO Database
-getDatabase file logH = do
+initializeDatabase :: FilePath -> Logger.Handle -> IO Database
+initializeDatabase file logH = do
   mbDB <- decodeFileStrict file
   case mbDB of
     Just _  -> Logger.logDebug logH $ "Database | Read database from file " <> file
