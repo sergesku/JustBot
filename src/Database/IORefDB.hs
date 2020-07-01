@@ -3,11 +3,12 @@
 
 module Database.IORefDB where
 
-import qualified Logger
+import           Logger                     (AppMonad, logDebug, logInfo, logWarning, logError)
 import           Data.Singl
 import           Data.Update
 import           Database.Internal
 import           Data.IORef
+import           Control.Monad.IO.Class
 import           Data.Text                (Text)
 import qualified Data.IntMap.Strict  as M (empty, findWithDefault, lookup, insert)
 import           Data.IntMap.Strict       (IntMap)
@@ -17,49 +18,49 @@ data Config = Config
   , userRef   :: IORef (IntMap Int)
   }
 
-getConfig :: SinglMsg m -> Logger.Handle -> Text -> IO Config
-getConfig singl logH txt = do
+getConfig :: SinglMsg m -> Text -> AppMonad Config
+getConfig singl txt = do
   let eFile = getDBFile singl txt
   Database{..} <- case eFile of
-    Left err   -> do Logger.logInfo logH "Database | Couldn`t get database file from config.ini. Initializing empty database"
+    Left err   -> do logInfo "Database | Couldn`t get database file from config.ini. Initializing empty database"
                      return emptyDB
-    Right file -> do Logger.logDebug logH $ "Database | Get database file from config.ini: " <> file
-                     initializeDatabase file logH
-  offsetRef <- newIORef offset
-  Logger.logDebug logH "Database | Initializing offsetRef"
-  userRef <- newIORef userMap
-  Logger.logDebug logH "Database | Initializing userRef"
+    Right file -> do logDebug $ "Database | Get database file from config.ini: " <> file
+                     initializeDatabase file
+  offsetRef <- liftIO $ newIORef offset
+  logDebug "Database | Initializing offsetRef"
+  userRef <- liftIO $ newIORef userMap
+  logDebug "Database | Initializing userRef"
   return $ Config {..}
   
-new :: Config -> Logger.Handle -> IO Handle
-new Config{..} logH = return $ Handle{..} where
-  getOffset :: IO Int
+new :: Config -> AppMonad Handle
+new Config{..} = return $ Handle{..} where
+  getOffset :: AppMonad Int
   getOffset = do
-    offset <- readIORef offsetRef
-    Logger.logDebug logH $ "Database | Current offset: " <> show offset
+    offset <- liftIO $ readIORef offsetRef
+    logDebug $ "Database | Current offset: " <> show offset
     return offset
 
-  getUserRepeatN :: UserId -> IO (Maybe Int)
+  getUserRepeatN :: UserId -> AppMonad (Maybe Int)
   getUserRepeatN userId = do
-    mbN <- M.lookup userId <$> readIORef userRef
+    mbN <- liftIO $ M.lookup userId <$> readIORef userRef
     let msg = case mbN of 
                 Just x  -> unwords ["Database | Read userRef. User", show userId, ": number of repeats -", show x]
                 Nothing -> unwords ["Database | Read userRef. User", show userId, "didn`t found in database."]
-    Logger.logDebug logH msg
+    logDebug msg
     return mbN
   
-  setOffset :: Int -> IO ()
+  setOffset :: Int -> AppMonad ()
   setOffset n = do
-    writeIORef offsetRef n
-    Logger.logDebug logH $ "Database | Write offsetRef. New offset: " <> show n
+    liftIO $ writeIORef offsetRef n
+    logDebug $ "Database | Write offsetRef. New offset: " <> show n
   
-  setUserRepeatN :: UserId -> Int -> IO ()
+  setUserRepeatN :: UserId -> Int -> AppMonad ()
   setUserRepeatN userId n = do
-    m <- readIORef userRef
-    Logger.logDebug logH "Database | Read userRef."
+    m <- liftIO $ readIORef userRef
+    logDebug "Database | Read userRef."
     let newMap = M.insert userId n m
-    writeIORef userRef newMap
-    Logger.logDebug logH $ unwords ["Database | Write userRef. User", show userId, ": number of repeats -", show n]
+    liftIO $ writeIORef userRef newMap
+    logDebug $ unwords ["Database | Write userRef. User", show userId, ": number of repeats -", show n]
 
-withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
-withHandle cfg logH f = new cfg logH >>= f
+withHandle :: Config -> (Handle -> AppMonad ()) -> AppMonad ()
+withHandle cfg f = new cfg >>= f

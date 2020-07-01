@@ -22,5 +22,5 @@ new :: Config -> Handle
 new Config {..} = Handle $ \ pri str ->
   when (pri >= logPriority) $ putStrLn str
 
-withHandle :: Config -> (Handle -> IO ()) -> IO ()
+withHandle :: Config -> (Handle -> AppMonad ()) -> AppMonad ()
 withHandle cfg f = f $ new cfg

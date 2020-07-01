@@ -5,7 +5,7 @@
 module Main where
 
 import           Data.Singl
-import qualified Logger               as Log   (getConfig, new, withHandle)
+import qualified Logger               as LOG   (getConfig, new, withHandle)
 import qualified Messenger            as MSG   (getConfig, withHandle)
 import qualified Database             as DB    (getConfig, withHandle)
 import           Data.Update               
@@ -44,12 +44,13 @@ main = do
 
 chatWith :: SinglMsg m -> SinglLog l -> IO ()
 chatWith msg logger = do
-    txt <- T.readFile "config.ini"
-    let Right logConfig = Log.getConfig logger txt
-    Log.withHandle logger logConfig $ \logH -> do
-      let Right config = getConfig txt
-      msgConfig <- MSG.getConfig msg logH txt
-      dbConfig  <- DB.getConfig msg logH txt
-      MSG.withHandle msg msgConfig logH $ \msgH ->
-        DB.withHandle dbConfig logH $ \dbH -> 
-          (`runReaderT` config) (forever $ interaction msgH dbH)
+  txt <- T.readFile "config.ini"
+  let Right logConfig = LOG.getConfig logger txt
+      logH = LOG.new logger logConfig
+      Right config = getConfig txt
+  (`runReaderT` logH) $ do
+    msgConfig <- MSG.getConfig msg txt
+    dbConfig  <- DB.getConfig msg txt
+    MSG.withHandle msg msgConfig $ \msgH ->
+      DB.withHandle dbConfig $ \dbH -> 
+        (`runReaderT` config) (forever $ interaction msgH dbH)

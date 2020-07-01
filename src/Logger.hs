@@ -3,7 +3,7 @@
 {-# LANGUAGE GADTs #-}
 
 module Logger 
-  ( Handle(..)
+  ( AppMonad
   , Priority(..)
   , logDebug
   , logInfo
@@ -29,7 +29,7 @@ new :: SinglLog l -> Config' l -> Handle
 new SFile    = FileLog.new
 new SConsole = ConsoleLog.new
 
-withHandle :: SinglLog l -> Config' l -> (Handle -> IO ()) -> IO ()
+withHandle :: SinglLog l -> Config' l -> (Handle -> AppMonad ()) -> AppMonad ()
 withHandle SFile    = FileLog.withHandle
 withHandle SConsole = ConsoleLog.withHandle
 

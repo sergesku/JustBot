@@ -4,7 +4,8 @@
 
 module Database.Internal where
 
-import qualified Logger
+import Logger             (AppMonad, logDebug, logInfo, logWarning, logError)
+import Control.Monad.IO.Class
 import Data.Singl
 import Data.Ini.Config
 import Data.Update
@@ -14,10 +15,10 @@ import Data.IntMap.Strict ( IntMap, empty )
 import Data.Text                  ( Text )
 
 data Handle = Handle
-  { getOffset      :: IO Int
-  , setOffset      :: Int -> IO ()
-  , getUserRepeatN :: UserId -> IO (Maybe Int)
-  , setUserRepeatN :: UserId -> Int -> IO ()
+  { getOffset      :: AppMonad Int
+  , setOffset      :: Int -> AppMonad ()
+  , getUserRepeatN :: UserId -> AppMonad (Maybe Int)
+  , setUserRepeatN :: UserId -> Int -> AppMonad ()
   }
 
 data ConfigDB = ConfigDB
@@ -49,12 +50,12 @@ dbFileParser m = case m of
                   SVK -> parser "VK" "vk.db"
   where parser sName def = section sName $ fieldDefOf "database" string def
 
-initializeDatabase :: FilePath -> Logger.Handle -> IO Database
-initializeDatabase file logH = do
-  mbDB <- decodeFileStrict file
+initializeDatabase :: FilePath -> AppMonad Database
+initializeDatabase file = do
+  mbDB <- liftIO $ decodeFileStrict file
   case mbDB of
-    Just _  -> Logger.logDebug logH $ "Database | Read database from file " <> file
-    Nothing -> Logger.logInfo logH $ "Database | Couldn`t read database from file " <> file <> ". Initializing empty database"
+    Just _  -> logDebug $ "Database | Read database from file " <> file
+    Nothing -> logInfo  $ "Database | Couldn`t read database from file " <> file <> ". Initializing empty database"
   return $ fromMaybe emptyDB mbDB
 
 emptyDB :: Database

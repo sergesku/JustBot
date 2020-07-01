@@ -20,11 +20,11 @@ data Config = Config
 parseConfig :: IniParser Config
 parseConfig = section "Logging" $ Config
   <$> fieldDefOf "priority" (readEither . T.unpack) Debug
-  <*> fieldDefOf "logFile" string "./log.log"
+  <*> fieldDefOf "logFile" string "./logFile.log"
 
 new :: Config -> Handle
 new Config {..} = Handle $ \ pri str ->
   when (pri >= logPriority) $ appendFile logFile str
 
-withHandle :: Config -> (Handle -> IO ()) -> IO ()
+withHandle :: Config -> (Handle -> AppMonad ()) -> AppMonad ()
 withHandle cfg f = f $ new cfg

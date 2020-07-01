@@ -4,7 +4,7 @@
 
 module Messenger.TG where
 
-import qualified Logger
+import           Logger                     (AppMonad, logDebug, logInfo, logWarning, logError)
 import           Messenger.Proxy (proxyParser)
 import           Network.HTTP.Simple
 import           Data.Update
@@ -35,60 +35,60 @@ configParser = section "TG" $ do
   proxy <- proxyParser
   return $ Config{..}
 
-getConfig :: Logger.Handle -> Text -> IO Config
-getConfig logH txt = do
+getConfig :: Text -> AppMonad Config
+getConfig txt = do
   let eConfig = parseIniFile txt configParser
   case eConfig of
-    Right cfg -> do Logger.logDebug logH "Messenger | Read TG config from file config.ini"
+    Right cfg -> do logDebug "Messenger | Read TG config from file config.ini"
                     return cfg
-    Left err  -> do Logger.logError logH $ unwords [ "Messenger | Couldn`t read TG config from file config.ini. Check it:", err]
+    Left err  -> do logError $ unwords [ "Messenger | Couldn`t read TG config from file config.ini. Check it:", err]
                     error ""
 
-withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
-withHandle cfg@Config{..} logH f = f Handle{..} where
-  sendMessage :: UserId -> Content -> IO ()
-  sendMessage = sendMessageWith cfg logH id
+withHandle :: Config -> (Handle -> AppMonad ()) -> AppMonad ()
+withHandle cfg@Config{..} f = f Handle{..} where
+  sendMessage :: UserId -> Content -> AppMonad ()
+  sendMessage = sendMessageWith id
   
-  sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
-  sendKeyMessage  = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
+  sendKeyMessage :: Keyboard -> UserId -> Content -> AppMonad ()
+  sendKeyMessage  = sendMessageWith . addToRequestQueryString . keyboardQuery
   
-  getUpdate :: Int -> IO [Update]
+  getUpdate :: Int -> AppMonad [Update]
   getUpdate offset = do
-    let req    = baseReqWith cfg "GET" "/getUpdates" query
+    let req    = baseReqWith "GET" "/getUpdates" query
         query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
-    Logger.logDebug logH $ "Messenger | Sending request:" <> show req
+    logDebug $ "Messenger | Sending request:" <> show req
     response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Response received:" <> show response
+    logDebug $ "Messenger | Response received:" <> show response
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
     case update of
-      Left err  -> do Logger.logDebug logH  "Messenger | There`s no updates"
-                      Logger.logInfo logH $ "Messenger | " <> show err
+      Left err  -> do logDebug  "Messenger | There`s no updates"
+                      logInfo $ "Messenger | " <> show err
                       return []
-      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
+      Right lst -> do logDebug $ "Messenger | Updates received: " <> show lst
                       return lst
 
-baseReqWith :: Config -> ByteString -> ByteString -> Query -> Request
-baseReqWith Config{..} method path query = setRequestMethod method
-                                         $ setRequestPath ("bot" <> token <> path)
-                                         $ addToRequestQueryString query
-                                         $ setRequestProxy proxy
-                                         "https://api.telegram.org"
-                    
-sendMessageWith :: Config -> Logger.Handle -> (Request -> Request) -> UserId -> Content -> IO ()
-sendMessageWith cfg logH f userId cont = do
-  Logger.logDebug logH $ "Messenger | Sending request:" <> show req
-  void $ httpLBS $ f req
-  where postReqWith path (flag,txt) = baseReqWith cfg "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
-        req = case cont of
-                (TextMsg t)      -> postReqWith "/sendMessage"   ("text", t)
-                (FileMsg t)      -> postReqWith "/sendDocument"  ("document", t)
-                (AudioMsg t)     -> postReqWith "/sendVoice"     ("voice", t)
-                (StickerMsg t)   -> postReqWith "/sendSticker"   ("sticker", t)
-                (AnimationMsg t) -> postReqWith "/sendAnimation" ("animation", t)
-                (PhotoMsg t)     -> postReqWith "/sendPhoto"     ("photo", t)
-                unsupported      -> error $ "Unsupported content type : " <> show unsupported
+  baseReqWith :: ByteString -> ByteString -> Query -> Request
+  baseReqWith method path query = setRequestMethod method
+                                $ setRequestPath ("bot" <> token <> path)
+                                $ addToRequestQueryString query
+                                $ setRequestProxy proxy
+                                "https://api.telegram.org"
+
+  sendMessageWith :: (Request -> Request) -> UserId -> Content -> AppMonad ()
+  sendMessageWith f userId cont = do
+    logDebug  $ "Messenger | Sending request:" <> show req
+    void $ httpLBS $ f req
+    where postReqWith path (flag,txt) = baseReqWith "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
+          req = case cont of
+                  (TextMsg t)      -> postReqWith "/sendMessage"   ("text", t)
+                  (FileMsg t)      -> postReqWith "/sendDocument"  ("document", t)
+                  (AudioMsg t)     -> postReqWith "/sendVoice"     ("voice", t)
+                  (StickerMsg t)   -> postReqWith "/sendSticker"   ("sticker", t)
+                  (AnimationMsg t) -> postReqWith "/sendAnimation" ("animation", t)
+                  (PhotoMsg t)     -> postReqWith "/sendPhoto"     ("photo", t)
+                  unsupported      -> error $ "Unsupported content type : " <> show unsupported
 
 keyboardQuery :: Keyboard -> Query
 keyboardQuery kb = [("reply_markup", Just . L8.toStrict . encode $ keyboard kb)]

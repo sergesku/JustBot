@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0e7515d4d35df82b94fb668086cba2be4f5ead058eae718592a14d11889ee2e8
+-- hash: 604c0385b0af964ed64fcf5d95c8abd90b40c793e45c84852cbcff218df5c2a2
 
 name:           JustBot
 version:        0.1.0.0
@@ -58,6 +58,7 @@ library
     , http-conduit
     , mtl
     , text
+    , transformers
     , vector
   default-language: Haskell2010
 
@@ -73,6 +74,7 @@ executable JustBot-exe
     , base >=4.7 && <5
     , mtl
     , text
+    , transformers
   default-language: Haskell2010
 
 test-suite JustBot-test
@@ -88,4 +90,5 @@ test-suite JustBot-test
     , base >=4.7 && <5
     , mtl
     , text
+    , transformers
   default-language: Haskell2010

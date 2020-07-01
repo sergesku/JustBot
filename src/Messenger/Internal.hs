@@ -4,6 +4,7 @@
 
 module Messenger.Internal where
 
+import           Logger                          (AppMonad)
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Update
@@ -14,8 +15,8 @@ type Keyboard = [[Button]]
 type Pars a = Value -> Parser a
 
 data Handle = Handle
-  { getUpdate      :: Int -> IO [Update]
-  , sendMessage    :: UserId -> Content -> IO ()
-  , sendKeyMessage :: Keyboard -> UserId -> Content -> IO () 
+  { getUpdate      :: Int -> AppMonad [Update]
+  , sendMessage    :: UserId -> Content -> AppMonad ()
+  , sendKeyMessage :: Keyboard -> UserId -> Content -> AppMonad () 
   }
 

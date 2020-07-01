@@ -1,6 +1,9 @@
 module Logger.Internal where
 
 import Prelude hiding (log)
+import Control.Monad.Reader
+
+type AppMonad = ReaderT Handle IO
 
 data Priority = Debug     -- ^ Debug info
               | Info      -- ^ Nottable information that requires no immediate action
@@ -10,20 +13,23 @@ data Priority = Debug     -- ^ Debug info
 
 newtype Handle = Handle { log :: Priority -> String -> IO () }
 
-logDebug :: Handle -> String -> IO ()
-logDebug = (`logPriority` Debug)
+logDebug :: String -> AppMonad ()
+logDebug = logPriority Debug
 
-logInfo :: Handle -> String -> IO ()
-logInfo = (`logPriority` Info)
+logInfo :: String -> AppMonad ()
+logInfo = logPriority Info
 
-logWarning :: Handle -> String -> IO ()
-logWarning = (`logPriority` Warning)
+logWarning :: String -> AppMonad ()
+logWarning = logPriority Warning
 
-logError :: Handle -> String -> IO ()
-logError = (`logPriority` Error)
+logError :: String -> AppMonad ()
+logError = logPriority Error
 
-logPriority :: Handle -> Priority -> String -> IO ()
-logPriority h pri = log h pri . mkLogMessage pri
+logPriority :: Priority -> String -> AppMonad ()
+logPriority pri str = do
+  h <- ask
+  let message = mkLogMessage pri str
+  liftIO $ log h pri message
 
 mkLogMessage :: Priority -> String -> String
 mkLogMessage  p str = unwords [show p, ":", str]
