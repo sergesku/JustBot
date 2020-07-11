@@ -86,3 +86,18 @@ processSendAnswer msgH dbH u@Update{..} = do
     defN <- asks defRepeatN
     liftIO $ do n <- fromMaybe defN <$> DB.getUserRepeatN dbH userId
                 replicateM_ n $ MSG.sendMessage msgH userId content
+
+processUpdate :: MSG.Handle -> DB.Handle -> Update -> ReaderT Config IO ()
+processUpdate msgH dbH u@Update{..} = do
+    case content of
+      (CommandMsg Command'Help)          -> processHelp msgH userId
+      (CommandMsg Command'Repeat)        -> processRepeat msgH dbH userId
+      (CommandMsg (Command'SetRepeat n)) -> processSetRepeat msgH dbH userId n
+      _                                  -> processSendAnswer msgH dbH u
+    liftIO $ DB.setOffset dbH $ succ updateId
+
+data Command = SendHelp UserId
+             | SendMessage Message UserId Int 
+             | SendRepeat UserId Int
+             | SetRepeat UserId Int
+             deriving (Eq, Show)
