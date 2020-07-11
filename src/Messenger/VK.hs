@@ -75,7 +75,7 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
     req <- setRequestQueryString query
            <$> setRequestProxy proxy
            <$> (parseRequest $ S8.unpack lpServer)
-    Logger.logDebug logH $ "Messenger | Sending <Get Updates> request : " <> show req
+    Logger.logDebug logH $ "Messenger | Sending <Get Updates> request: " <> show req
     response <- httpLBS req
     Logger.logDebug logH $ "Messenger | Response <Get Updates> received: " <> show response
     let body = getResponseBody response
@@ -88,28 +88,28 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
                       return lst
   
   sendMessage :: UserId -> Content -> IO ()
-  sendMessage = sendMessageWith cfg logH id
+  sendMessage = sendMessageWith id
   
   sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
-  sendKeyMessage = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
+  sendKeyMessage = sendMessageWith . addToRequestQueryString . keyboardQuery
 
-sendMessageWith :: Config -> Logger.Handle -> (Request -> Request) -> UserId -> Content -> IO ()
-sendMessageWith Config{..} logH f userId msg = do
-  let baseQuery = [ ("peer_id", Just $ S8.show userId)
-                  , ("v", Just "5.89")
-                  , ("access_token", Just token)
-                  ]      
-      query = case msg of
-              (TextMsg bs)        -> [("message", Just bs)]
-              (StickerMsg bs)     -> [("sticker_id", Just bs)]
-              (ComplexMsg bs lst) -> collectQuery bs lst
-              m                   -> error $ "Unsupported content type!" <> show m
-      req = setRequestMethod "POST"
-          $ setRequestProxy proxy
-          $ addToRequestQueryString (baseQuery <> query)
-          $ "https://api.vk.com/method/messages.send"
-  Logger.logDebug logH $ "Messenger | Sending <Post Message> request: " <> show req
-  void $ httpLBS $ f req
+  sendMessageWith :: (Request -> Request) -> UserId -> Content -> IO ()
+  sendMessageWith f userId msg = do
+    let baseQuery = [ ("peer_id", Just $ S8.show userId)
+                    , ("v", Just "5.89")
+                    , ("access_token", Just token)
+                    ]      
+        query = case msg of
+                (TextMsg bs)        -> [("message", Just bs)]
+                (StickerMsg bs)     -> [("sticker_id", Just bs)]
+                (ComplexMsg bs lst) -> collectQuery bs lst
+                m                   -> error $ "Unsupported content type!" <> show m
+        req = setRequestMethod "POST"
+            $ setRequestProxy proxy
+            $ addToRequestQueryString (baseQuery <> query)
+            $ "https://api.vk.com/method/messages.send"
+    Logger.logDebug logH $ "Messenger | Sending <Post Message> request: " <> show req
+    void $ httpLBS $ f req
 
         
 collectQuery :: ByteString -> [Content] -> Query
