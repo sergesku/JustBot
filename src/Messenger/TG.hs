@@ -4,6 +4,8 @@
 
 module Messenger.TG where
 
+import           Data.Error
+import           Control.Exception
 import qualified Logger
 import           Messenger.Proxy (proxyParser)
 import           Network.HTTP.Simple
@@ -37,58 +39,60 @@ configParser = section "TG" $ do
 
 getConfig :: Logger.Handle -> Text -> IO Config
 getConfig logH txt = do
+  Logger.logDebug logH "Messenger | Reading TG config from file config.ini"
   let eConfig = parseIniFile txt configParser
   case eConfig of
-    Right cfg -> do Logger.logDebug logH "Messenger | Read TG config from file config.ini"
+    Right cfg -> do Logger.logDebug logH $ "Messenger | TG Config: " <> show cfg
                     return cfg
-    Left err  -> do Logger.logError logH $ unwords [ "Messenger | Couldn`t read TG config from file config.ini. Check it:", err]
-                    error ""
+    Left err  -> do Logger.logError logH $ "Messenger | Error parsing configuration file: " <> err
+                    throw $ ConfigurationError err
 
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
 withHandle cfg@Config{..} logH f = f Handle{..} where
   sendMessage :: UserId -> Content -> IO ()
-  sendMessage = sendMessageWith cfg logH id
+  sendMessage = sendMessageWith id
   
   sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
-  sendKeyMessage  = sendMessageWith cfg logH . addToRequestQueryString . keyboardQuery
+  sendKeyMessage  = sendMessageWith . addToRequestQueryString . keyboardQuery
   
   getUpdate :: Int -> IO [Update]
-  getUpdate offset = do
-    let req    = baseReqWith cfg "GET" "/getUpdates" query
-        query  = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
-    Logger.logDebug logH $ "Messenger | Sending request:" <> show req
-    response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Response received:" <> show response
+  getUpdate offset = handle rethrowHTTPException $ do
+    let query = [("offset", Just $ S8.show offset), ("timeout", Just "25")]
+        req   = baseReqWith "GET" "/getUpdates" query
+    Logger.logDebug logH $ "Messenger | Sending <Get Updates> request:\n" <> show req
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
+    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> show response
     case update of
-      Left err  -> do Logger.logDebug logH  "Messenger | There`s no updates"
-                      Logger.logInfo logH $ "Messenger | " <> show err
-                      return []
-      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
+      Left err  -> do Logger.logWarning logH $ "Messenger | Error parsing updates from JSON: " <> err
+                      throw $ ServiceApiError err
+      Right lst -> do Logger.logDebug logH $ "Messenger | Received updates:\n " <> show lst
                       return lst
 
-baseReqWith :: Config -> ByteString -> ByteString -> Query -> Request
-baseReqWith Config{..} method path query = setRequestMethod method
-                                         $ setRequestPath ("bot" <> token <> path)
-                                         $ addToRequestQueryString query
-                                         $ setRequestProxy proxy
-                                         "https://api.telegram.org"
-                    
-sendMessageWith :: Config -> Logger.Handle -> (Request -> Request) -> UserId -> Content -> IO ()
-sendMessageWith cfg logH f userId cont = do
-  Logger.logDebug logH $ "Messenger | Sending request:" <> show req
-  void $ httpLBS $ f req
-  where postReqWith path (flag,txt) = baseReqWith cfg "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
-        req = case cont of
-                (TextMsg t)      -> postReqWith "/sendMessage"   ("text", t)
-                (FileMsg t)      -> postReqWith "/sendDocument"  ("document", t)
-                (AudioMsg t)     -> postReqWith "/sendVoice"     ("voice", t)
-                (StickerMsg t)   -> postReqWith "/sendSticker"   ("sticker", t)
-                (AnimationMsg t) -> postReqWith "/sendAnimation" ("animation", t)
-                (PhotoMsg t)     -> postReqWith "/sendPhoto"     ("photo", t)
-                unsupported      -> error $ "Unsupported content type : " <> show unsupported
+  sendMessageWith :: (Request -> Request) -> UserId -> Content -> IO ()
+  sendMessageWith f userId cont = handle rethrowHTTPException $ 
+    case eReq of
+    Right req -> do Logger.logDebug logH $ "Messenger | Sending request: \n" <> show req
+                    void $ httpLBS $ f req
+    Left err  -> do Logger.logWarning logH $ "Messenger | " <> err
+                    throw $ ServiceApiError err
+    where postReqWith path (flag,txt) = baseReqWith "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
+          eReq = case cont of
+                  (TextMsg t)      -> Right $ postReqWith "/sendMessage"   ("text", t)
+                  (FileMsg t)      -> Right $ postReqWith "/sendDocument"  ("document", t)
+                  (AudioMsg t)     -> Right $ postReqWith "/sendVoice"     ("voice", t)
+                  (StickerMsg t)   -> Right $ postReqWith "/sendSticker"   ("sticker", t)
+                  (AnimationMsg t) -> Right $ postReqWith "/sendAnimation" ("animation", t)
+                  (PhotoMsg t)     -> Right $ postReqWith "/sendPhoto"     ("photo", t)
+                  unsupported      -> Left $ "Unsupported TG content type: " <> show unsupported
+
+  baseReqWith :: ByteString -> ByteString -> Query -> Request
+  baseReqWith method path query = setRequestMethod method
+                                $ setRequestPath ("bot" <> token <> path)
+                                $ addToRequestQueryString query
+                                $ setRequestProxy proxy
+                                $ parseRequestThrow_ "https://api.telegram.org"
 
 keyboardQuery :: Keyboard -> Query
 keyboardQuery kb = [("reply_markup", Just . L8.toStrict . encode $ keyboard kb)]
