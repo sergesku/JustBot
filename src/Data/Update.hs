@@ -7,7 +7,7 @@ type UserId = Int
 data Update = Update
   { updId      :: Int
   , updUserId  :: UserId
-  , udpMessage :: Message
+  , updMessage :: Message
   } deriving (Show)
 
 data Message = TextMsg ByteString
@@ -17,11 +17,11 @@ data Message = TextMsg ByteString
              | StickerMsg ByteString
              | AnimationMsg ByteString
              | ComplexMsg ByteString [Message]
-             | CommandMsg Command
+             | CommandMsg UserCommand
              | UnsupportedMsg
-             deriving (Show)
-
-data Command = Command'Help
-             | Command'Repeat
-             | Command'SetRepeat Int
              deriving (Eq, Show)
+
+data UserCommand = UserCommandHelp
+                 | UserCommandRepeat
+                 | UserCommandSetRepeat Int
+                 deriving (Eq, Show)

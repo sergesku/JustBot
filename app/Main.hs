@@ -52,4 +52,4 @@ chatWith msg logger = do
       dbConfig  <- DB.getConfig msg logH txt
       MSG.withHandle msg msgConfig logH $ \msgH ->
         DB.withHandle dbConfig logH $ \dbH -> 
-          (`runReaderT` config) (forever $ interaction msgH dbH)
+          forever $ interaction msgH dbH config

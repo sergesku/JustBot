@@ -133,19 +133,19 @@ photoPars = withObject "Photo with Bot.Impl.TG.photoPars" $ \o -> do
     PhotoMsg . encodeUtf8 <$> (x .: "file_id")
 
 callbackPars :: Pars Message
-callbackPars = withObject "Command with Bot.Impl.TG.callbackPars" $ \o -> do
+callbackPars = withObject "UserCommand with Bot.Impl.TG.callbackPars" $ \o -> do
     str <- (o .: "data") :: Parser String
     case words str of
-      ("/setRepeat":n:_) -> return $ CommandMsg $ Command'SetRepeat (read n)
+      ("/setRepeat":n:_) -> return $ CommandMsg $ UserCommandSetRepeat (read n)
       _                  -> fail "Wrong Callback"
 
 commandPars :: Pars Message
-commandPars = withObject "Command with Bot.Impl.TG.commandPars" $ \o -> do
+commandPars = withObject "UserCommand with Bot.Impl.TG.commandPars" $ \o -> do
     (x:_ )     <- (o .: "entities")
     entityType <- withObject "Entity type with Bot.Impl.TG.commandPars" ( .: "type") x :: Parser String
     guard (entityType == "bot_command")
     (txt:_) <- words <$> (o .: "text")
     case txt of
-        "/help"       -> return $ CommandMsg Command'Help
-        "/repeat"     -> return $ CommandMsg Command'Repeat
-        _             -> fail $ "Unsupported Command"
+        "/help"       -> return $ CommandMsg UserCommandHelp
+        "/repeat"     -> return $ CommandMsg UserCommandRepeat
+        _             -> fail $ "Unsupported UserCommand"

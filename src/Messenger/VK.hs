@@ -155,10 +155,10 @@ updateLstPars = withObject "updateList" $ \o -> do
 
 updatePars :: Int -> Pars Update
 updatePars updId = withObject "update" $ \o -> do
-    obj     <- o .: "object"
-   updUserId  <- obj .: "user_id"
-    updMessage <- asum $ fmap ($ Object obj) [stickerPars, complexPars, commandPars, textPars]
-    return $ Update{..}
+  obj     <- o .: "object"
+  updUserId  <- obj .: "user_id"
+  updMessage <- asum $ fmap ($ Object obj) [stickerPars, complexPars, commandPars, textPars]
+  return $ Update{..}
     
 textPars :: Pars Message
 textPars = withObject "text" $ \ o -> TextMsg . encodeUtf8 <$> (o .: "body")
@@ -202,11 +202,11 @@ commandPars :: Pars Message
 commandPars = withObject "command" $ \ o -> do
     txt <- (o .: "body") :: Parser String
     case words txt of
-      ("/help":_)         -> return $ CommandMsg Command'Help
-      ("/repeat":_)       -> return $ CommandMsg Command'Repeat
+      ("/help":_)         -> return $ CommandMsg UserCommandHelp
+      ("/repeat":_)       -> return $ CommandMsg UserCommandRepeat
       ("Change":"to":n:_) -> do let x = read n :: Int
                                 guard (x > 0 && x <= 5)
-                                return $ CommandMsg $ Command'SetRepeat x 
+                                return $ CommandMsg $ UserCommandSetRepeat x 
       _                   -> fail "Unsupported command"
 
 
