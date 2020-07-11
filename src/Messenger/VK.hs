@@ -87,13 +87,13 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
       Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
                       return lst
   
-  sendMessage :: UserId -> Content -> IO ()
+  sendMessage :: UserId -> Message -> IO ()
   sendMessage = sendMessageWith id
   
-  sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
+  sendKeyMessage :: Keyboard -> UserId -> Message -> IO ()
   sendKeyMessage = sendMessageWith . addToRequestQueryString . keyboardQuery
 
-  sendMessageWith :: (Request -> Request) -> UserId -> Content -> IO ()
+  sendMessageWith :: (Request -> Request) -> UserId -> Message -> IO ()
   sendMessageWith f userId msg = do
     let baseQuery = [ ("peer_id", Just $ S8.show userId)
                     , ("v", Just "5.89")
@@ -112,7 +112,7 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
     void $ httpLBS $ f req
 
         
-collectQuery :: ByteString -> [Content] -> Query
+collectQuery :: ByteString -> [Message] -> Query
 collectQuery txt lst = go txt lst []
     where go t [] result = [ ("message", Just t)
                            , ("attachment", Just $ mconcat $ intersperse "," result)
@@ -154,16 +154,16 @@ updateLstPars = withObject "updateList" $ \o -> do
     mapM (uncurry updatePars) indexed
 
 updatePars :: Int -> Pars Update
-updatePars updateId = withObject "update" $ \o -> do
+updatePars updId = withObject "update" $ \o -> do
     obj     <- o .: "object"
-    userId  <- obj .: "user_id"
-    content <- asum $ fmap ($ Object obj) [stickerPars, complexPars, commandPars, textPars]
+   updUserId  <- obj .: "user_id"
+    updMessage <- asum $ fmap ($ Object obj) [stickerPars, complexPars, commandPars, textPars]
     return $ Update{..}
     
-textPars :: Pars Content
+textPars :: Pars Message
 textPars = withObject "text" $ \ o -> TextMsg . encodeUtf8 <$> (o .: "body")
  
-mediaPars :: (ByteString -> Content) -> String -> Pars Content
+mediaPars :: (ByteString -> Message) -> String -> Pars Message
 mediaPars constructor str = withObject str $ \ o -> do
     obj     <- o .: T.pack str
     ownerId <- (obj .: "owner_id") :: Parser Integer
@@ -171,34 +171,34 @@ mediaPars constructor str = withObject str $ \ o -> do
     key     <- ('_':) <$> (obj .:? "access_key" .!= "")
     return . constructor . S8.pack . mconcat $ [str, show ownerId, "_", show mediaId, key]
 
-photoPars :: Pars Content
+photoPars :: Pars Message
 photoPars = mediaPars PhotoMsg "photo"
 
-audioPars :: Pars Content
+audioPars :: Pars Message
 audioPars = mediaPars AudioMsg "audio"
 
-animationPars :: Pars Content
+animationPars :: Pars Message
 animationPars = mediaPars AnimationMsg "video"
 
-stickerPars :: Pars Content
+stickerPars :: Pars Message
 stickerPars = withObject "sticker" $ \ o -> do
     (x:_)      <- V.toList <$> (o .: "attachments")
     sticker_id <- (x .: "sticker") >>= ( .: "id") :: Parser Int
     return . StickerMsg . S8.show $ sticker_id
     
-attachmentPars :: Pars Content
+attachmentPars :: Pars Message
 attachmentPars = withObject "attachment" $ \o -> photoPars (Object o)
                                              <|> audioPars (Object o)
                                              <|> animationPars (Object o)
 
-complexPars :: Pars Content
+complexPars :: Pars Message
 complexPars = withObject "attachmentLst" $ \ o -> do
     txt <- encodeUtf8 <$> (o .: "body")
     vec <- o .: "attachments"
     lst <- mapM attachmentPars $ V.toList vec
     return $ ComplexMsg txt lst
 
-commandPars :: Pars Content
+commandPars :: Pars Message
 commandPars = withObject "command" $ \ o -> do
     txt <- (o .: "body") :: Parser String
     case words txt of

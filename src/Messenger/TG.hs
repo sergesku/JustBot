@@ -49,10 +49,10 @@ getConfig logH txt = do
 
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
 withHandle cfg@Config{..} logH f = f Handle{..} where
-  sendMessage :: UserId -> Content -> IO ()
+  sendMessage :: UserId -> Message -> IO ()
   sendMessage = sendMessageWith id
   
-  sendKeyMessage :: Keyboard -> UserId -> Content -> IO ()
+  sendKeyMessage :: Keyboard -> UserId -> Message -> IO ()
   sendKeyMessage  = sendMessageWith . addToRequestQueryString . keyboardQuery
   
   getUpdate :: Int -> IO [Update]
@@ -70,7 +70,7 @@ withHandle cfg@Config{..} logH f = f Handle{..} where
       Right lst -> do Logger.logDebug logH $ "Messenger | Received updates:\n " <> show lst
                       return lst
 
-  sendMessageWith :: (Request -> Request) -> UserId -> Content -> IO ()
+  sendMessageWith :: (Request -> Request) -> UserId -> Message -> IO ()
   sendMessageWith f userId cont = handle rethrowHTTPException $ 
     case eReq of
     Right req -> do Logger.logDebug logH $ "Messenger | Sending request: \n" <> show req
@@ -113,10 +113,10 @@ updateLstPars = withObject "[Update] with Bot.Impl.TG.updateLstPars" $ \o -> do
     
 updatePars :: Pars Update
 updatePars = withObject "Update with Bot.Impl.TG.updatePars" $ \o -> do
-    updateId <- (o .: "update_id") :: Parser Int
-    message  <- o .: "message" <|> o .: "edited_message" <|> o .: "callback_query"
-    userId   <- (message .: "from") >>= ( .: "id")
-    content  <- asum [ commandPars (Object message)
+    updId      <- (o .: "update_id") :: Parser Int
+    message    <- o .: "message" <|> o .: "edited_message" <|> o .: "callback_query"
+    updUserId  <- (message .: "from") >>= ( .: "id")
+    updMessage <- asum [ commandPars (Object message)
                      , callbackPars (Object message)
                      , TextMsg . encodeUtf8 <$> (message .: "text")
                      , AudioMsg . encodeUtf8 <$> ((message .: "voice") >>= ( .: "file_id"))
@@ -127,19 +127,19 @@ updatePars = withObject "Update with Bot.Impl.TG.updatePars" $ \o -> do
                      , return UnsupportedMsg ]   
     return Update{..}
 
-photoPars :: Pars Content
+photoPars :: Pars Message
 photoPars = withObject "Photo with Bot.Impl.TG.photoPars" $ \o -> do
     (x:_) <- V.toList <$> (o .: "photo")
     PhotoMsg . encodeUtf8 <$> (x .: "file_id")
 
-callbackPars :: Pars Content
+callbackPars :: Pars Message
 callbackPars = withObject "Command with Bot.Impl.TG.callbackPars" $ \o -> do
     str <- (o .: "data") :: Parser String
     case words str of
       ("/setRepeat":n:_) -> return $ CommandMsg $ Command'SetRepeat (read n)
       _                  -> fail "Wrong Callback"
 
-commandPars :: Pars Content
+commandPars :: Pars Message
 commandPars = withObject "Command with Bot.Impl.TG.commandPars" $ \o -> do
     (x:_ )     <- (o .: "entities")
     entityType <- withObject "Entity type with Bot.Impl.TG.commandPars" ( .: "type") x :: Parser String

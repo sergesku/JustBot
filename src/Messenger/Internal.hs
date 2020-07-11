@@ -15,7 +15,7 @@ type Pars a = Value -> Parser a
 
 data Handle = Handle
   { getUpdate      :: Int -> IO [Update]
-  , sendMessage    :: UserId -> Content -> IO ()
-  , sendKeyMessage :: Keyboard -> UserId -> Content -> IO () 
+  , sendMessage    :: UserId -> Message -> IO ()
+  , sendKeyMessage :: Keyboard -> UserId -> Message -> IO () 
   }
 

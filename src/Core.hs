@@ -42,12 +42,12 @@ interaction msgH dbH = do
   
 processUpdate :: MSG.Handle -> DB.Handle -> Update -> ReaderT Config IO ()
 processUpdate msgH dbH u@Update{..} = do
-    case content of
-      (CommandMsg Command'Help)          -> processHelp msgH userId
-      (CommandMsg Command'Repeat)        -> processRepeat msgH dbH userId
-      (CommandMsg (Command'SetRepeat n)) -> processSetRepeat msgH dbH userId n
+    case updMessage of
+      (CommandMsg Command'Help)          -> processHelp msgHupdUserId
+      (CommandMsg Command'Repeat)        -> processRepeat msgH dbHupdUserId
+      (CommandMsg (Command'SetRepeat n)) -> processSetRepeat msgH dbHupdUserId n
       _                                  -> processSendAnswer msgH dbH u
-    liftIO $ DB.setOffset dbH $ succ updateId
+    liftIO $ DB.setOffset dbH $ succ updId
 
 processHelp :: MSG.Handle -> UserId -> ReaderT Config IO ()
 processHelp msgH userId = asks helpMessage >>= liftIO . MSG.sendMessage msgH userId . TextMsg
@@ -84,17 +84,17 @@ processSetRepeat msgH dbH userId newN = do
 processSendAnswer :: MSG.Handle -> DB.Handle -> Update -> ReaderT Config IO ()
 processSendAnswer msgH dbH u@Update{..} = do
     defN <- asks defRepeatN
-    liftIO $ do n <- fromMaybe defN <$> DB.getUserRepeatN dbH userId
-                replicateM_ n $ MSG.sendMessage msgH userId content
+    liftIO $ do n <- fromMaybe defN <$> DB.getUserRepeatN dbHupdUserId
+                replicateM_ n $ MSG.sendMessage msgHupdUserId udpMessage
 
 processUpdate :: MSG.Handle -> DB.Handle -> Update -> ReaderT Config IO ()
 processUpdate msgH dbH u@Update{..} = do
-    case content of
-      (CommandMsg Command'Help)          -> processHelp msgH userId
-      (CommandMsg Command'Repeat)        -> processRepeat msgH dbH userId
-      (CommandMsg (Command'SetRepeat n)) -> processSetRepeat msgH dbH userId n
+    case updMessage of
+      (CommandMsg Command'Help)          -> processHelp msgHupdUserId
+      (CommandMsg Command'Repeat)        -> processRepeat msgH dbHupdUserId
+      (CommandMsg (Command'SetRepeat n)) -> processSetRepeat msgH dbHupdUserId n
       _                                  -> processSendAnswer msgH dbH u
-    liftIO $ DB.setOffset dbH $ succ updateId
+    liftIO $ DB.setOffset dbH $ succ updId
 
 data Command = SendHelp UserId
              | SendMessage Message UserId Int 

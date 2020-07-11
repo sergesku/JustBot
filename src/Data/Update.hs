@@ -5,18 +5,18 @@ import Data.ByteString.Char8 (ByteString)
 type UserId = Int
 
 data Update = Update
-  { updateId :: Int
-  , userId   :: UserId
-  , content  :: Content
+  { updId      :: Int
+  , updUserId  :: UserId
+  , udpMessage :: Message
   } deriving (Show)
 
-data Content = TextMsg ByteString
+data Message = TextMsg ByteString
              | FileMsg ByteString
              | PhotoMsg ByteString
              | AudioMsg ByteString
              | StickerMsg ByteString
              | AnimationMsg ByteString
-             | ComplexMsg ByteString [Content]
+             | ComplexMsg ByteString [Message]
              | CommandMsg Command
              | UnsupportedMsg
              deriving (Show)
