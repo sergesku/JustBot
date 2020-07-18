@@ -18,7 +18,7 @@ instance Exception AppError
 instance Show AppError where
   show (NetworkError e) = "Network communication error:\n" <> show e
   show (SystemError e) = "System error: " <> show e
-  show (InputArgsError t) = "Unsapported args: " <> t
+  show (InputArgsError t) = "Input args error:\n" <> t
   show (ConfigurationError t) = "Error parsing configuration file: " <> t
   show (ServiceApiError t) = "Error while communicating with external services: " <> t
 
