@@ -29,7 +29,15 @@ import           Data.Ini.Config
 data Config = Config
   { token :: ByteString
   , proxy :: Maybe Proxy
-  } deriving (Show)               
+  }
+
+instance Show Config where
+  show Config{..} = unlines
+    [ "Config {"
+    , "  token        = " ++ show token
+    , "  proxy        = " ++ show proxy
+    , "}"
+    ]        
 
 configParser :: IniParser Config
 configParser = section "TG" $ do 
@@ -39,12 +47,11 @@ configParser = section "TG" $ do
 
 getConfig :: Logger.Handle -> Text -> IO Config
 getConfig logH txt = do
-  Logger.logDebug logH "Messenger | Reading TG config from file config.ini"
   let eConfig = parseIniFile txt configParser
   case eConfig of
-    Right cfg -> do Logger.logDebug logH $ "Messenger | TG Config: " <> show cfg
+    Right cfg -> do Logger.logDebug logH $ "Messenger | Read TG config from file config.ini:\n" <> show cfg
                     return cfg
-    Left err  -> do Logger.logError logH $ "Messenger | Error parsing configuration file: " <> err
+    Left err  -> do Logger.logError logH $ "Messenger | Couldn`t read TG config from file config.ini. Check it: " <> err
                     throw $ ConfigurationError err
 
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
@@ -63,20 +70,19 @@ withHandle cfg@Config{..} logH f = f Handle{..} where
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
-    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> show response
+    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> showResp response
     case update of
       Left err  -> do Logger.logWarning logH $ "Messenger | Error parsing updates from JSON: " <> err
                       throw $ ServiceApiError err
-      Right lst -> do Logger.logDebug logH $ "Messenger | Received updates:\n " <> show lst
+      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received:\n" <> show lst
                       return lst
 
   sendMessageWith :: (Request -> Request) -> UserId -> Message -> IO ()
   sendMessageWith f userId cont = handle rethrowHTTPException $ 
     case eReq of
-    Right req -> do Logger.logDebug logH $ "Messenger | Sending request: \n" <> show req
-                    void $ httpLBS $ f req
-    Left err  -> do Logger.logWarning logH $ "Messenger | " <> err
-                    throw $ ServiceApiError err
+      Right req -> do Logger.logDebug logH $ "Messenger | Sending request: \n" <> show req
+                      void $ httpLBS $ f req
+      Left err  -> Logger.logWarning logH $ "Messenger | " <> err
     where postReqWith path (flag,txt) = baseReqWith "POST" path [("chat_id", Just $ S8.show userId), (flag, Just txt)]
           eReq = case cont of
                   (TextMsg t)      -> Right $ postReqWith "/sendMessage"   ("text", t)
