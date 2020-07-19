@@ -129,7 +129,7 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
       Left err  -> Logger.logWarning logH $ "Messenger | " <> err
       Right q   -> do let req = setRequestMethod "POST"
                               $ setRequestProxy proxy
-                              $ addToRequestQueryString (baseQuery <> query)
+                              $ addToRequestQueryString (baseQuery <> q)
                               $ "https://api.vk.com/method/messages.send"
                       Logger.logDebug logH $ "Messenger | Sending <Post Message> request:\n" <> show req
                       void $ httpLBS $ f req
