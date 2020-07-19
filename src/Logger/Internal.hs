@@ -26,4 +26,4 @@ logPriority :: Handle -> Priority -> String -> IO ()
 logPriority h pri = log h pri . mkLogMessage pri
 
 mkLogMessage :: Priority -> String -> String
-mkLogMessage  p str = unwords [show p, ":", str]
+mkLogMessage  p str = "\n" <> show p <> " : " <> str
