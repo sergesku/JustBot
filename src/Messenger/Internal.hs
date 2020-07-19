@@ -8,6 +8,7 @@ import           Data.Aeson
 import           Data.Aeson.Types
 import           Data.Update
 import           Data.Text                       (Text)
+import           Network.HTTP.Simple
 
 type Button   = (Text, Text)        -- (Button Label, Button Value)
 type Keyboard = [[Button]]
@@ -19,3 +20,12 @@ data Handle = Handle
   , sendKeyMessage :: Keyboard -> UserId -> Message -> IO () 
   }
 
+showResp :: (Show a) => Response a -> String
+showResp resp = unlines
+  [ "Response {"
+  , "  status    = " ++ show status
+  , "  body      = " ++ show body
+  , "}"
+  ]
+  where status = getResponseStatus resp
+        body   = getResponseBody resp
