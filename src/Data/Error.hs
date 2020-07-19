@@ -5,26 +5,31 @@ import Data.Typeable
 import Network.HTTP.Simple
 import Network.HTTP.Client.Conduit
 
-data AppError = NetworkError SomeException
-              | MessengerResponseTimeout
-              | SystemError SomeException
+data AppError = CodeError String
               | InputArgsError String
-              | ConfigurationError String
+              | SystemError SomeException
               | ServiceApiError String
+              | ConfigurationError String
+              | NetworkError SomeException
+              | ResponseTimeoutError
               deriving (Typeable)
 
 instance Exception AppError
 
 instance Show AppError where
-  show (NetworkError e) = "Network communication error:\n" <> show e
+  show (CodeError t) = "Error in application code: " <> t
+  show (InputArgsError t) = "Input args error:\n" <> t
   show (SystemError e) = "System error: " <> show e
-  show (InputArgsError t) = "Unsapported args: " <> t
+  show (ServiceApiError t) = "Error while communicating with external services:\n" <> t
   show (ConfigurationError t) = "Error parsing configuration file: " <> t
-  show (ServiceApiError t) = "Error while communicating with external services: " <> t
+  show (NetworkError e) = "Network communication error:\n" <> show e
+  show ResponseTimeoutError = "Messenger response timed out."
 
 rethrowHTTPException :: HttpException -> IO a
-rethrowHTTPException (HttpExceptionRequest _ (StatusCodeException resp _)) = 
-  throw . ServiceApiError . show $ getResponseStatus resp
-rethrowHTTPException (HttpExceptionRequest _ ResponseTimeout) = 
-  throw MessengerResponseTimeout
-rethrowHTTPException e = throw . NetworkError $ toException e
+rethrowHTTPException err = throw appError
+  where 
+    appError = case err of 
+      (InvalidUrlException url reason) -> ServiceApiError $ unwords [reason,"<", url, ">"]
+      (HttpExceptionRequest _ (StatusCodeException resp _)) -> ServiceApiError . show $ getResponseStatus resp
+      (HttpExceptionRequest _ ResponseTimeout) -> ResponseTimeoutError
+      e -> NetworkError $ toException e
