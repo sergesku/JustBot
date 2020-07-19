@@ -4,6 +4,7 @@
 
 module Messenger.VK where
 
+import           Data.Error
 import qualified Logger
 import           Data.Ini.Config
 import           Messenger.Proxy (proxyParser)
@@ -12,6 +13,7 @@ import           Messenger.Internal
 import           Data.Aeson
 import           Data.Aeson.Types
 import           Network.HTTP.Simple
+import           Control.Exception
 import           Control.Monad.Reader
 import           Data.ByteString.Char8       (ByteString)
 import           Data.Text.Encoding          (encodeUtf8)
@@ -28,7 +30,16 @@ data LongPollConfig = LongPollConfig
   { lpKey    :: ByteString
   , lpServer :: ByteString
   , lpOffset :: Int
-  } deriving (Show)
+  }
+
+instance Show LongPollConfig where
+  show LongPollConfig{..} = unlines
+    [ "LongPollConfig {"
+    , "  lpKey        = " ++ show lpKey
+    , "  lpServer     = " ++ show lpServer
+    , "  lpOffset     = " ++ show lpOffset
+    , "}"
+    ]
 
 instance FromJSON LongPollConfig where
   parseJSON = withObject "LongPollConfig" $ \ o -> do
@@ -42,7 +53,16 @@ data Config = Config
   { token      :: ByteString
   , community  :: ByteString
   , proxy      :: Maybe Proxy
-  } deriving (Show)
+  }
+
+instance Show Config where
+  show Config{..} = unlines
+    [ "Config {"
+    , "  token        = " ++ show token
+    , "  community    = " ++ show community
+    , "  proxy        = " ++ show proxy
+    , "}"
+    ]
 
 configParser :: IniParser Config
 configParser = section "VK" $ do 
@@ -55,15 +75,22 @@ getConfig :: Logger.Handle -> Text -> IO Config
 getConfig logH txt = do
   let eConfig = parseIniFile txt configParser
   case eConfig of
-    Right cfg -> do Logger.logDebug logH "Messenger | Read VK config from file config.ini"
+    Right cfg -> do Logger.logDebug logH $ "Messenger | Read VK config from file config.ini:\n" <> show cfg
                     return cfg
-    Left err  -> do Logger.logError logH $ unwords [ "Messenger | Couldn`t read VK config from file config.ini. Check it:", err]
-                    error ""
+    Left err  -> do Logger.logError logH $ "Messenger | Couldn`t read VK config from file config.ini. Check it: " <> err
+                    throw $ ConfigurationError err
 
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
 withHandle  cfg@Config{..} logH f = f Handle{..} where
+
+  sendMessage :: UserId -> Message -> IO ()
+  sendMessage = sendMessageWith id
+ 
+  sendKeyMessage :: Keyboard -> UserId -> Message -> IO ()
+  sendKeyMessage = sendMessageWith . addToRequestQueryString . keyboardQuery
+  
   getUpdate :: Int -> IO [Update]
-  getUpdate n = do
+  getUpdate n = handle rethrowHTTPException $ do
     LongPollConfig{..} <- getLongPollConfig cfg logH
     let lastN n = lpOffset - n
         offset = max (lastN 20) n
@@ -75,41 +102,37 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
     req <- setRequestQueryString query
            <$> setRequestProxy proxy
            <$> (parseRequest $ S8.unpack lpServer)
-    Logger.logDebug logH $ "Messenger | Sending <Get Updates> request: " <> show req
+    Logger.logDebug logH $ "Messenger | Sending <Get Updates> request:\n" <> show req
     response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Response <Get Updates> received: " <> show response
+    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> showResp response
     let body = getResponseBody response
         eUpdate = parseEither updateLstPars =<< eitherDecode body
     case eUpdate of
-      Left err  -> do Logger.logDebug logH "Messenger | There`s no updates"
-                      Logger.logInfo logH $ "Messenger | " <> show err
-                      return []
-      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received: " <> show lst
+      Left err  -> do Logger.logWarning logH $ "Messenger | Error parsing updates from JSON: " <> err
+                      throw $ ServiceApiError err
+      Right lst -> do Logger.logDebug logH $ "Messenger | Updates received:\n" <> show lst
                       return lst
   
-  sendMessage :: UserId -> Message -> IO ()
-  sendMessage = sendMessageWith id
-  
-  sendKeyMessage :: Keyboard -> UserId -> Message -> IO ()
-  sendKeyMessage = sendMessageWith . addToRequestQueryString . keyboardQuery
 
   sendMessageWith :: (Request -> Request) -> UserId -> Message -> IO ()
-  sendMessageWith f userId msg = do
+  sendMessageWith f userId msg = handle rethrowHTTPException $ do
     let baseQuery = [ ("peer_id", Just $ S8.show userId)
                     , ("v", Just "5.89")
                     , ("access_token", Just token)
                     ]      
-        query = case msg of
-                (TextMsg bs)        -> [("message", Just bs)]
-                (StickerMsg bs)     -> [("sticker_id", Just bs)]
-                (ComplexMsg bs lst) -> collectQuery bs lst
-                m                   -> error $ "Unsupported content type!" <> show m
-        req = setRequestMethod "POST"
-            $ setRequestProxy proxy
-            $ addToRequestQueryString (baseQuery <> query)
-            $ "https://api.vk.com/method/messages.send"
-    Logger.logDebug logH $ "Messenger | Sending <Post Message> request: " <> show req
-    void $ httpLBS $ f req
+        eQuery = case msg of
+                (TextMsg bs)        -> Right [("message", Just bs)]
+                (StickerMsg bs)     -> Right [("sticker_id", Just bs)]
+                (ComplexMsg bs lst) -> Right $ collectQuery bs lst
+                unsupported         -> Left $ "Unsupported VK content type: " <> show unsupported
+    case eQuery of
+      Left err  -> Logger.logWarning logH $ "Messenger | " <> err
+      Right q   -> do let req = setRequestMethod "POST"
+                              $ setRequestProxy proxy
+                              $ addToRequestQueryString (baseQuery <> query)
+                              $ "https://api.vk.com/method/messages.send"
+                      Logger.logDebug logH $ "Messenger | Sending <Post Message> request:\n" <> show req
+                      void $ httpLBS $ f req
 
         
 collectQuery :: ByteString -> [Message] -> Query
@@ -132,19 +155,17 @@ getLongPollConfig cfg@Config{..} logH = do
             $ setRequestQueryString query
             $ setRequestProxy proxy
             $ "https://api.vk.com/method/groups.getLongPollServer"
-    
-    Logger.logDebug logH $ "Messenger | Sending <Get LongPoll Config> request: " <> show req
+    Logger.logDebug logH $ "Messenger | Sending <Get LongPoll Config> request:\n" <> show req
     response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Responce <Get LongPoll Config> received: " <> show req
-    let body    = getResponseBody response
-        eServer = eitherDecode body
-    case eServer of
-      Left e  -> do Logger.logError logH "Messenger | Couldn`t get LongPoll Config from responce"
-                    error e
-      Right s -> do Logger.logDebug logH $ "Messenger | Get LongPoll Config from responce: " <> show s
+    Logger.logDebug logH $ "Messenger | Responce <Get LongPoll Config> received:\n" <> showResp response
+    let body = getResponseBody response
+        eSrv = eitherDecode body
+    case eSrv of
+      Left e  -> do Logger.logError logH "Messenger | Couldn`t parse LongPoll Config from responce"
+                    throw $ ServiceApiError "Couldn`t parse LongPoll Config from responce"
+      Right s -> do Logger.logDebug logH $ "Messenger | Get LongPoll Config from responce:\n" <> show s
                     return s
-
-                     
+ 
 updateLstPars :: Pars [Update]
 updateLstPars = withObject "updateList" $ \o -> do
     nextUpdate <- read <$> (o .: "ts")
