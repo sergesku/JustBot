@@ -25,7 +25,7 @@ data AppOption where
   MsgOption :: SinglMsg m -> AppOption
   LogOption :: SinglLog l -> AppOption
 
-options :: [OptDescr (Either String AppOption)]
+options :: [OptDescr (Either ArgsError AppOption)]
 options = [ Option ['m'] ["messenger"] (ReqArg readMsgOption "Messenger") "Messenger to run the bot :: tg | vk"
           , Option ['l'] ["log"] (ReqArg readLogOption "Log") "Log output :: console | file"
           ]
@@ -35,17 +35,17 @@ processStr = map toUpper . trim
   where trim = f . f
         f    = reverse . dropWhile isSpace
 
-readMsgOption :: String -> Either String AppOption
+readMsgOption :: String -> Either ArgsError AppOption
 readMsgOption str = case processStr str of
   "TG" -> Right $ MsgOption STG
   "VK" -> Right $ MsgOption SVK
-  _    -> Left  $ "Unsapported Messenger type: " <> str <> "."
+  _    -> Left  $ UnsapportedOption "Messenger" str
 
-readLogOption :: String -> Either String AppOption
+readLogOption :: String -> Either ArgsError AppOption
 readLogOption str = case processStr str of
   "FILE"    -> Right $ LogOption SFile
   "CONSOLE" -> Right $ LogOption SConsole
-  _         -> Left  $ "Unsapported Log type: " <> str <> "."
+  _         -> Left  $ UnsapportedOption "Messenger" str
 
 isMsgOption :: AppOption -> Bool
 isMsgOption (MsgOption _ ) = True
@@ -55,17 +55,17 @@ isLogOption :: AppOption -> Bool
 isLogOption (LogOption _) = True
 isLogOption _             = False
 
-getOption :: String -> (AppOption -> Bool) -> [AppOption] -> Either String AppOption
+getOption :: String -> (AppOption -> Bool) -> [AppOption] -> Either ArgsError AppOption
 getOption opt f lst = case filter f lst of 
   [x] -> Right x
-  []  -> Left $ "You didn`t specify which " <> opt <> " to use."
-  _   -> Left $ "Too many " <> opt <> " options specified."
+  []  -> Left $ UnspecifiedOption opt
+  _   -> Left $ TooManyOptions opt
 
-extractOptions :: [String] -> Either String (AppOption, AppOption)
+extractOptions :: [String] -> Either ArgsError (AppOption, AppOption)
 extractOptions args = do
   let (eOpts, nonOpts, unrec) = getOpt RequireOrder options args
-  unless (null nonOpts) $ Left $ unlines $ map ("unrecognized option: " <>) nonOpts
-  unless (null unrec)   $ Left $ concat unrec
+  unless (null nonOpts) $ Left $ NonOption $ head nonOpts
+  unless (null unrec)   $ Left $ UnrecognizedOption $ head unrec
   opts   <- sequenceA eOpts
   msgOpt <- getOption "Messenger" isMsgOption opts
   logOpt <- getOption "Log" isLogOption opts
@@ -87,5 +87,5 @@ main :: IO ()
 main = do
   args <- getArgs
   case extractOptions args of
-    Left str -> throw $ InputArgsError $ str <> "\n\n" <> usageInfo "Usage info: " options
+    Left err -> throw $ InputArgsError err $ "\n" <> usageInfo "Usage info: " options
     Right (MsgOption m, LogOption l)    -> runChatWith m l
