@@ -49,9 +49,9 @@ getConfig :: Logger.Handle -> Text -> IO Config
 getConfig logH txt = do
   let eConfig = parseIniFile txt configParser
   case eConfig of
-    Right cfg -> do Logger.logDebug logH $ "Messenger | Read TG config from file config.ini:\n" <> show cfg
+    Right cfg -> do Logger.logDebug logH $ unlines ["Messenger | Read TG config from file config.ini:", show cfg]
                     return cfg
-    Left err  -> do Logger.logError logH $ "Messenger | Couldn`t read TG config from file config.ini. Check it: " <> err
+    Left err  -> do Logger.logError logH $ unlines ["Messenger | Couldn`t read TG config from file config.ini.", err]
                     throw $ ConfigurationError err
 
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
@@ -70,7 +70,7 @@ withHandle cfg@Config{..} logH f = f Handle{..} where
     response <- httpLBS req
     let body   = getResponseBody response
         update = parseEither updateLstPars =<< eitherDecode body
-    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> showResp response
+    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> showResponse response
     case update of
       Left err  -> do Logger.logWarning logH $ "Messenger | Error parsing updates from JSON: " <> err
                       throw $ ServiceApiError err

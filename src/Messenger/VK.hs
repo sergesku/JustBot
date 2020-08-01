@@ -77,7 +77,7 @@ getConfig logH txt = do
   case eConfig of
     Right cfg -> do Logger.logDebug logH $ "Messenger | Read VK config from file config.ini:\n" <> show cfg
                     return cfg
-    Left err  -> do Logger.logError logH $ "Messenger | Couldn`t read VK config from file config.ini. Check it: " <> err
+    Left err  -> do Logger.logError logH $ "Messenger | Couldn`t read VK config from file config.ini." <> err
                     throw $ ConfigurationError err
 
 withHandle :: Config -> Logger.Handle -> (Handle -> IO ()) -> IO ()
@@ -104,7 +104,7 @@ withHandle  cfg@Config{..} logH f = f Handle{..} where
            <$> (parseRequest $ S8.unpack lpServer)
     Logger.logDebug logH $ "Messenger | Sending <Get Updates> request:\n" <> show req
     response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> showResp response
+    Logger.logDebug logH $ "Messenger | Response <Get Updates> received:\n" <> showResponse response
     let body = getResponseBody response
         eUpdate = parseEither updateLstPars =<< eitherDecode body
     case eUpdate of
@@ -157,7 +157,7 @@ getLongPollConfig cfg@Config{..} logH = do
             $ "https://api.vk.com/method/groups.getLongPollServer"
     Logger.logDebug logH $ "Messenger | Sending <Get LongPoll Config> request:\n" <> show req
     response <- httpLBS req
-    Logger.logDebug logH $ "Messenger | Responce <Get LongPoll Config> received:\n" <> showResp response
+    Logger.logDebug logH $ "Messenger | Responce <Get LongPoll Config> received:\n" <> showResponse response
     let body = getResponseBody response
         eSrv = eitherDecode body
     case eSrv of

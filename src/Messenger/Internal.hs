@@ -20,8 +20,8 @@ data Handle = Handle
   , sendKeyMessage :: Keyboard -> UserId -> Message -> IO () 
   }
 
-showResp :: (Show a) => Response a -> String
-showResp resp = unlines
+showResponse :: (Show a) => Response a -> String
+showResponse resp = unlines
   [ "Response {"
   , "  status    = " ++ show status
   , "  body      = " ++ show body
