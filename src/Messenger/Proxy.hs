@@ -11,6 +11,7 @@ module Messenger.Proxy
   ( proxyParser
   ) where
 
+import           Data.Bifunctor              (first)
 import           Data.Update
 import           Data.Ini.Config
 import           Text.Read                   (readMaybe)
@@ -22,8 +23,9 @@ import           Data.ByteString.Char8 as S8 (pack)
 import           Data.ByteString.Char8       (ByteString)
 import qualified Data.Text.Encoding    as T      (encodeUtf8)
 
-newtype Validate e a = Validate {runValidate :: Either e a}
-                       deriving (Show, Functor, Monad)
+newtype Validate e a =
+  Validate {runValidate :: Either e a}
+  deriving (Show, Functor, Monad)
 
 instance Monoid e => Applicative (Validate e) where
   pure = Validate . Right
@@ -36,35 +38,43 @@ instance Monoid e => MonadError e (Validate e) where
   Validate (Left e) `catchError` h = h e
   v `catchError` _ = v
 
+data ProxyError = IncorrectProxyFormat String
+                | IncorrectIPFormap String
+                | IncorrectPortFormat String
+
+instance Show ProxyError where
+  show (IncorrectProxyFormat str) = "\nIncorrect Proxy format: " <> str
+  show (IncorrectIPFormap str) = "\nIncorrect Proxy IP format: " <> str
+  show (IncorrectPortFormat str) = "\nIncorrect Proxy port format: " <> str
+
 proxyParser :: SectionParser (Maybe Proxy)
 proxyParser = fieldMbOf "proxy" $ \txt -> 
   let eProxy = runValidate $ validateProxy txt
-   in case eProxy of
-        Left lst -> Left $ concatMap T.unpack lst
-        Right p  -> Right p
+   in first (unwords . map show) eProxy
             
-validateProxy :: Text -> Validate [Text] Proxy
-validateProxy txt = 
-  case T.words txt of
-   [ip,port]   -> Proxy <$> validateIp ip <*> validatePort port
-   ip:port:rest -> throwError ["\nIncorrect Proxy format: " <> txt] <*> validateIp ip <*> validatePort port
-   _            -> throwError ["\nIncorrect Proxy format: " <> txt]
+validateProxy :: Text -> Validate [ProxyError] Proxy
+validateProxy txt = case T.words txt of
+   [ip,port] -> Proxy <$> validateIp ip <*> validatePort port
+   _         -> throwError [IncorrectProxyFormat $ T.unpack txt]
 
 checkOctet :: String -> Maybe ()
-checkOctet oct = do i <- readMaybe oct
-                    guard (i >= 0 && i < 255)
+checkOctet oct = do
+  i <- readMaybe oct
+  guard (i >= 0 && i < 256)
 
-validateIp :: Text -> Validate [Text] ByteString
+validateIp :: Text -> Validate [ProxyError] ByteString
 validateIp ip = do
   let octs = T.splitOn "." ip
-      result = traverse (checkOctet . T.unpack) octs
-  case result of
-    Nothing -> throwError ["\nIncorrect IP format: " <> ip]
+      err  = [IncorrectIPFormap $ T.unpack ip]
+      test = traverse (checkOctet . T.unpack) octs
+  when (length octs /= 4) $ throwError err
+  case test of
+    Nothing -> throwError err
     Just _  -> return $ T.encodeUtf8 ip
 
-validatePort :: Text -> Validate [Text] Int
+validatePort :: Text -> Validate [ProxyError] Int
 validatePort port = do
   let result = readMaybe (T.unpack port) >>= \p -> guard (p > 0) >> return p
   case result of
-    Nothing -> throwError ["\nIncorrect Port format: " <> port]
+    Nothing -> throwError [IncorrectPortFormat $ T.unpack port]
     Just p  -> return p
