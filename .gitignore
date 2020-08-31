@@ -2,7 +2,7 @@
 .history
 .stack-work/
 workTask.txt
-*.ini
+config.ini
 *.db
 .ghcid
 *.log
