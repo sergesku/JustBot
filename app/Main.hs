@@ -5,8 +5,6 @@
 
 module Main where
 
-import qualified Data.Map as M
-import           Data.Map (Map)
 import           Data.Error
 import           Control.Exception
 import           System.Console.GetOpt
