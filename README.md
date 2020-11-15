@@ -1,1 +1,1 @@
-# JustBot
+# Just telegram + vk Bot
