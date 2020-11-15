@@ -30,22 +30,23 @@ options = [ Option ['m'] ["messenger"] (ReqArg readMsgOption "Messenger") "Messe
           , Option ['l'] ["log"] (ReqArg readLogOption "Log") "Log output :: console | file"
           ]
 
-processStr :: String -> String
-processStr = map toUpper . trim
-  where trim = f . f
-        f    = reverse . dropWhile isSpace
+trim :: String -> String
+trim = f . f 
+  where f = reverse . dropWhile isSpace
 
 readMsgOption :: String -> Either ArgsError AppOption
-readMsgOption str = case processStr str of
+readMsgOption str = case map toUpper trimed of
   "TG" -> Right $ MsgOption STG
   "VK" -> Right $ MsgOption SVK
-  _    -> Left  $ UnsapportedOption "Messenger" str
+  _    -> Left  $ UnsapportedOption "Messenger" trimed
+  where trimed = trim str
 
 readLogOption :: String -> Either ArgsError AppOption
-readLogOption str = case processStr str of
+readLogOption str = case map toUpper trimed of
   "FILE"    -> Right $ LogOption SFile
   "CONSOLE" -> Right $ LogOption SConsole
-  _         -> Left  $ UnsapportedOption "Messenger" str
+  _         -> Left  $ UnsapportedOption "Log" trimed
+  where trimed = trim str
 
 isMsgOption :: AppOption -> Bool
 isMsgOption (MsgOption _ ) = True
@@ -87,5 +88,5 @@ main :: IO ()
 main = do
   args <- getArgs
   case extractOptions args of
-    Left err -> throw $ InputArgsError err $ "\n" <> usageInfo "Usage info: " options
+    Left err -> mapM_ putStrLn [show err, "\n" <> usageInfo "Usage info: " options]
     Right (MsgOption m, LogOption l)    -> runChatWith m l
