@@ -4,14 +4,16 @@
 
 module Database.Internal where
 
+import           Control.Exception
+import           Data.Error
 import qualified Logger
-import Data.Singl
-import Data.Ini.Config
-import Data.Update
-import Data.Aeson
-import Data.Maybe         ( fromMaybe )
-import Data.IntMap.Strict ( IntMap, empty )
-import Data.Text                  ( Text )
+import           Data.Singl
+import           Data.Ini.Config
+import           Data.Update
+import           Data.Aeson
+import           Data.Maybe         ( fromMaybe )
+import           Data.IntMap.Strict ( IntMap, empty )
+import           Data.Text                  ( Text )
 
 data Handle = Handle
   { getOffset      :: IO Int
